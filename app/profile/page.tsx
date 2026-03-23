@@ -3,14 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { RecoveryRequestForm } from "@/components/profile/recovery-request-form";
-import { RequestEmailChangeForm } from "@/components/profile/request-email-change-form";
-import { RequestPasswordChangeForm } from "@/components/profile/request-password-change-form";
-import { VerifyOtpForm } from "@/components/profile/verify-otp-form";
 import { Card } from "@/components/ui/card";
-import { isSmtpConfigured } from "@/lib/email";
 import { formatUtcDateTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
-import { getNextCredentialChangeDate } from "@/lib/services/profile";
 
 export const dynamic = "force-dynamic";
 
@@ -48,9 +43,6 @@ export default async function ProfilePage() {
     redirect("/sign-in");
   }
 
-  const nextChangeWindow = getNextCredentialChangeDate(user);
-  const otpEnabled = isSmtpConfigured();
-
   return (
     <main className="app-shell py-8">
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.95fr]">
@@ -78,27 +70,15 @@ export default async function ProfilePage() {
           <div className="mt-4 space-y-4">
             <PolicyItem
               title="Email change cadence"
-              detail={
-                nextChangeWindow.email
-                  ? `Next self-service eligibility after ${formatUtcDateTime(nextChangeWindow.email)}.`
-                  : "First self-service email change will be allowed once OTP delivery is enabled."
-              }
+              detail="Self-service email changes are temporarily under development and are not available in this release."
             />
             <PolicyItem
               title="Password change cadence"
-              detail={
-                nextChangeWindow.password
-                  ? `Next self-service eligibility after ${formatUtcDateTime(nextChangeWindow.password)}.`
-                  : "First self-service password change will be allowed once OTP delivery is enabled."
-              }
+              detail="Self-service password changes are temporarily under development and are not available in this release."
             />
             <PolicyItem
               title="Verification requirement"
-              detail={
-                otpEnabled
-                  ? "Email and password updates require OTP verification sent to the currently attached email."
-                  : "Direct email and password updates are reserved for OTP-verified flows only. SMTP delivery is not configured in this deployment yet."
-              }
+              detail="For now, use the admin request flow below if you need account help or an email correction."
             />
           </div>
         </Card>
@@ -123,31 +103,25 @@ export default async function ProfilePage() {
         <Card className="rounded-[32px] p-6">
           <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">Change email</p>
           <p className="mt-3 text-sm text-[var(--muted)]">
-            OTP is delivered to your currently attached email. Self-service email changes are restricted to once every 60 days.
+            This feature is under development. Please use the admin request feature below for any email correction needs right now.
           </p>
-          <div className="mt-5">
-            <RequestEmailChangeForm />
-          </div>
+          <UnderDevelopmentNotice />
         </Card>
 
         <Card className="rounded-[32px] p-6">
           <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">Change password</p>
           <p className="mt-3 text-sm text-[var(--muted)]">
-            Password updates also require OTP verification and are limited to once every 60 days.
+            This feature is under development. Please use the admin request feature below if you need help regaining access for now.
           </p>
-          <div className="mt-5">
-            <RequestPasswordChangeForm />
-          </div>
+          <UnderDevelopmentNotice />
         </Card>
 
         <Card className="rounded-[32px] p-6">
-          <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">Verify OTP</p>
+          <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">Credential updates</p>
           <p className="mt-3 text-sm text-[var(--muted)]">
-            Enter the request ID and 6-digit code sent to your current email to complete the credential change.
+            OTP-based self-service verification is paused for now. Once this feature is released, it will appear here.
           </p>
-          <div className="mt-5">
-            <VerifyOtpForm />
-          </div>
+          <UnderDevelopmentNotice />
         </Card>
       </div>
 
@@ -214,6 +188,17 @@ function PolicyItem({ title, detail }: { title: string; detail: string }) {
     <div className="rounded-[22px] border border-[var(--line)] bg-[var(--surface-soft)] p-4">
       <p className="font-medium">{title}</p>
       <p className="mt-2 text-sm text-[var(--muted)]">{detail}</p>
+    </div>
+  );
+}
+
+function UnderDevelopmentNotice() {
+  return (
+    <div className="mt-5 rounded-[22px] border border-[var(--line)] bg-[var(--surface-soft)] p-4">
+      <p className="font-medium">Under development</p>
+      <p className="mt-2 text-sm text-[var(--muted)]">
+        This self-service flow is currently disabled. Use the admin request feature below until it is released.
+      </p>
     </div>
   );
 }
