@@ -41,10 +41,21 @@ export function ThemeToggle() {
       disabled={!ready}
       aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
       aria-pressed={theme === "dark"}
-      className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--theme-chip)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] shadow-[var(--shadow)] transition hover:bg-[var(--theme-chip-hover)] disabled:opacity-70"
+      className="relative inline-flex h-10 w-18 items-center rounded-full border border-[var(--line)] bg-[var(--theme-chip)] px-1 text-[var(--foreground)] shadow-[var(--shadow)] transition hover:bg-[var(--theme-chip-hover)] disabled:opacity-70"
     >
-      {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
-      <span>{theme === "dark" ? "Light" : "Dark"} mode</span>
+      <span className="absolute left-2.5">
+        <Sun className="size-4" />
+      </span>
+      <span className="absolute right-2.5">
+        <Moon className="size-4" />
+      </span>
+      <span
+        className={`absolute top-1 flex size-8 items-center justify-center rounded-full bg-[var(--button-primary-bg)] text-[var(--button-primary-fg)] transition-transform ${
+          theme === "dark" ? "translate-x-8" : "translate-x-0"
+        }`}
+      >
+        {theme === "dark" ? <Moon className="size-4" /> : <Sun className="size-4" />}
+      </span>
     </button>
   );
 }
