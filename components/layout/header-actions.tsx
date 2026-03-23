@@ -11,7 +11,7 @@ type HeaderActionsProps = {
 };
 
 function isMinimalPublicRoute(pathname: string) {
-  return pathname === "/" || pathname === "/sign-in" || pathname === "/sign-up";
+  return pathname === "/sign-in" || pathname === "/sign-up";
 }
 
 export function HeaderActions({ isAuthenticated }: HeaderActionsProps) {
