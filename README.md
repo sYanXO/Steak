@@ -69,6 +69,7 @@ Useful direct commands:
 npm run prisma:migrate
 npm run prisma:seed
 npm run prisma:generate
+npm run bootstrap:admin
 ```
 
 ## Demo accounts
@@ -79,6 +80,24 @@ Seeded credentials:
 - user: `captain@stakeipl.app` / `userpass123`
 
 The seed also creates one demo IPL market.
+
+## Admin bootstrap
+
+For a fresh deployed database where you do not want demo seed data, create the first admin with:
+
+```bash
+source /home/sreayan/.nvm/nvm.sh
+set -a && source .env.local
+BOOTSTRAP_ADMIN_EMAIL="you@example.com" \
+BOOTSTRAP_ADMIN_PASSWORD="replace-with-a-strong-password" \
+BOOTSTRAP_ADMIN_NAME="Your Name" \
+npm run bootstrap:admin
+```
+
+This script is idempotent:
+
+- if the user does not exist, it creates an admin account with a wallet
+- if the user already exists, it promotes that user to `ADMIN`, updates the password, and ensures a wallet exists
 
 ## Run
 

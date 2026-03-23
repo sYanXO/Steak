@@ -6,6 +6,7 @@ import { HeaderNav } from "@/components/layout/header-nav";
 export async function AppHeader() {
   const session = await auth();
   const isAuthenticated = Boolean(session?.user);
+  const isAdmin = session?.user?.role === "ADMIN";
 
   return (
     <header className="app-shell pt-6">
@@ -14,7 +15,7 @@ export async function AppHeader() {
           <Link href="/" className="text-lg font-bold tracking-tight">
             Stake IPL
           </Link>
-          {isAuthenticated ? <HeaderNav /> : null}
+          {isAuthenticated ? <HeaderNav isAdmin={isAdmin} /> : null}
         </div>
 
         <HeaderActions isAuthenticated={isAuthenticated} />

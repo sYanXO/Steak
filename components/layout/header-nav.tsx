@@ -12,6 +12,10 @@ const NAV_ITEMS = [
   { href: "/admin", label: "Admin" }
 ] satisfies Array<{ href: Route; label: string }>;
 
+type HeaderNavProps = {
+  isAdmin: boolean;
+};
+
 function isMinimalPublicRoute(pathname: string) {
   return pathname === "/" || pathname === "/sign-in" || pathname === "/sign-up";
 }
@@ -24,7 +28,7 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function HeaderNav() {
+export function HeaderNav({ isAdmin }: HeaderNavProps) {
   const pathname = usePathname();
 
   if (isMinimalPublicRoute(pathname)) {
@@ -33,7 +37,7 @@ export function HeaderNav() {
 
   return (
     <nav className="flex flex-wrap items-center gap-2 text-sm">
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.filter((item) => (item.href === "/admin" ? isAdmin : true)).map((item) => {
         const active = isActive(pathname, item.href);
 
         return (
