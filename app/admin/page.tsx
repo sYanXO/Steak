@@ -12,6 +12,31 @@ import { formatCoins, formatUtcDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
+async function getOpenRecoveryRequests() {
+  try {
+    return await prisma.accountRecoveryRequest.findMany({
+      where: { status: "OPEN" },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        currentEmail: true,
+        requestedEmail: true,
+        reason: true,
+        createdAt: true,
+        user: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+  } catch {
+    return [];
+  }
+}
+
 export default async function AdminPage() {
   const session = await auth();
 
@@ -109,24 +134,7 @@ export default async function AdminPage() {
         }
       }
     }),
-    prisma.accountRecoveryRequest.findMany({
-      where: { status: "OPEN" },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        currentEmail: true,
-        requestedEmail: true,
-        reason: true,
-        createdAt: true,
-        user: {
-          select: {
-            name: true,
-            email: true
-          }
-        }
-      }
-    }),
+    getOpenRecoveryRequests(),
     prisma.user.count(),
     prisma.ledgerEntry.aggregate({
       _sum: {
