@@ -8,6 +8,7 @@ import {
   verifyCredentialOtpSchema
 } from "@/lib/validation/profile-credentials";
 import { createRecoveryRequestSchema, resolveRecoveryRequestSchema } from "@/lib/validation/profile";
+import { signInSchema } from "@/lib/validation/auth";
 
 function addDays(date: Date, days: number) {
   const next = new Date(date);
@@ -266,13 +267,13 @@ export async function verifyCredentialOtp(rawInput: {
 export async function resolveRecoveryRequest(rawInput: {
   requestId: string;
   email: string;
-  adminEmail: string;
+  adminId: string;
 }) {
   const input = resolveRecoveryRequestSchema.parse(rawInput);
 
   return prisma.$transaction(async (tx) => {
     const admin = await tx.user.findUnique({
-      where: { email: rawInput.adminEmail.toLowerCase() }
+      where: { id: rawInput.adminId }
     });
 
     if (!admin || admin.role !== "ADMIN") {
@@ -337,4 +338,51 @@ export async function resolveRecoveryRequest(rawInput: {
       throw error;
     }
   });
+}
+
+export async function updateAdminOwnProfile(rawInput: {
+  userId: string;
+  name: string;
+  email: string;
+}) {
+  const email = signInSchema.shape.email.parse(rawInput.email).toLowerCase();
+  const name = rawInput.name.trim();
+
+  if (name.length < 2 || name.length > 80) {
+    throw new Error("Name must be between 2 and 80 characters.");
+  }
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: rawInput.userId }
+      });
+
+      if (!user || user.role !== "ADMIN") {
+        throw new Error("Admin authorization required.");
+      }
+
+      return tx.user.update({
+        where: { id: user.id },
+        data: {
+          name,
+          email
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true
+        }
+      });
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      throw new Error("That email is already in use.");
+    }
+
+    throw error;
+  }
 }

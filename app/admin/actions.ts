@@ -89,7 +89,7 @@ export async function settleMarketAction(
     const result = await settleMarket({
       marketId,
       outcomeId: String(formData.get("outcomeId") ?? ""),
-      adminEmail: session.user.email
+      adminId: session.user.id
     });
 
     revalidatePath("/");
@@ -121,7 +121,7 @@ export async function createMatchAction(
       homeTeam: String(formData.get("homeTeam") ?? ""),
       awayTeam: String(formData.get("awayTeam") ?? ""),
       startsAt: normalizeDateTimeLocal(formData.get("startsAt")),
-      adminEmail: session.user.email
+      adminId: session.user.id
     });
 
     revalidatePath("/");
@@ -153,7 +153,7 @@ export async function createMarketAction(
       opensAt: normalizeDateTimeLocal(formData.get("opensAt")),
       closesAt: normalizeDateTimeLocal(formData.get("closesAt")),
       outcomes: String(formData.get("outcomes") ?? ""),
-      adminEmail: session.user.email
+      adminId: session.user.id
     });
 
     revalidatePath("/");
@@ -183,7 +183,7 @@ export async function updateMarketStatusAction(
     const market = await updateMarketStatus({
       marketId,
       status: String(formData.get("status") ?? "") as "DRAFT" | "OPEN" | "CLOSED" | "VOID",
-      adminEmail: session.user.email
+      adminId: session.user.id
     });
 
     revalidatePath("/");
@@ -213,7 +213,7 @@ export async function manualTopUpAction(
       userId: String(formData.get("userId") ?? ""),
       amount: Number(formData.get("amount") ?? 0),
       reason: String(formData.get("reason") ?? ""),
-      adminEmail: session.user.email
+      adminId: session.user.id
     });
 
     revalidatePath("/dashboard");
@@ -242,7 +242,7 @@ export async function resolveRecoveryRequestAction(
     const user = await resolveRecoveryRequest({
       requestId,
       email: String(formData.get("email") ?? ""),
-      adminEmail: session.user.email
+      adminId: session.user.id
     });
 
     revalidatePath("/admin");

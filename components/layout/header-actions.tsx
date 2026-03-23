@@ -8,20 +8,36 @@ import { Button } from "@/components/ui/button";
 
 type HeaderActionsProps = {
   isAuthenticated: boolean;
+  isAdmin: boolean;
 };
 
 function isMinimalPublicRoute(pathname: string) {
   return pathname === "/sign-in" || pathname === "/sign-up";
 }
 
-export function HeaderActions({ isAuthenticated }: HeaderActionsProps) {
+export function HeaderActions({ isAuthenticated, isAdmin }: HeaderActionsProps) {
   const pathname = usePathname();
+  const showMinimalPublicActions = pathname === "/";
 
   return (
     <div className="flex flex-wrap items-center gap-3">
       <ThemeToggle />
       {isAuthenticated ? (
-        <SignOutButton />
+        <>
+          {showMinimalPublicActions ? (
+            <>
+              <Button asChild variant="secondary">
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
+              {isAdmin ? (
+                <Button asChild variant="secondary">
+                  <Link href="/admin">Admin</Link>
+                </Button>
+              ) : null}
+            </>
+          ) : null}
+          <SignOutButton />
+        </>
       ) : isMinimalPublicRoute(pathname) ? null : (
         <>
           <Button

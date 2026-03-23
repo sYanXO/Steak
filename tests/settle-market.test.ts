@@ -86,7 +86,7 @@ test("settleMarket resolves pending stakes, credits winners, and writes audit da
   const result = await settleMarket({
     marketId: "market-1",
     outcomeId: "outcome-a",
-    adminEmail: "admin@stakeipl.app"
+    adminId: "admin-1"
   });
 
   assert.equal(result.settledOutcome, "Mumbai");

@@ -12,7 +12,7 @@ import {
 } from "@/lib/validation/admin";
 
 type AdminIdentity = {
-  adminEmail: string;
+  adminId: string;
 };
 
 type CreateMatchInput = AdminIdentity & {
@@ -55,9 +55,9 @@ function formatAdminUtc(value: Date) {
   }).format(value);
 }
 
-async function requireAdmin(tx: Prisma.TransactionClient, email: string) {
+async function requireAdmin(tx: Prisma.TransactionClient, userId: string) {
   const admin = await tx.user.findUnique({
-    where: { email: email.toLowerCase() }
+    where: { id: userId }
   });
 
   if (!admin || admin.role !== "ADMIN") {
@@ -71,7 +71,7 @@ export async function createMatch(rawInput: CreateMatchInput) {
   const input = createMatchSchema.parse(rawInput);
 
   return prisma.$transaction(async (tx) => {
-    const admin = await requireAdmin(tx, rawInput.adminEmail);
+    const admin = await requireAdmin(tx, rawInput.adminId);
     const startsAt = new Date(input.startsAt);
 
     const match = await tx.match.create({
@@ -105,7 +105,7 @@ export async function createMarket(rawInput: CreateMarketInput) {
   const input = createMarketSchema.parse(rawInput);
 
   return prisma.$transaction(async (tx) => {
-    const admin = await requireAdmin(tx, rawInput.adminEmail);
+    const admin = await requireAdmin(tx, rawInput.adminId);
     const opensAt = new Date(input.opensAt);
     const closesAt = new Date(input.closesAt);
 
@@ -180,7 +180,7 @@ export async function updateMarketStatus(rawInput: UpdateMarketStatusInput) {
   const input = updateMarketStatusSchema.parse(rawInput);
 
   return prisma.$transaction(async (tx) => {
-    const admin = await requireAdmin(tx, rawInput.adminEmail);
+    const admin = await requireAdmin(tx, rawInput.adminId);
     const market = await tx.market.findUnique({
       where: { id: input.marketId },
       include: {
@@ -229,7 +229,7 @@ export async function manualTopUp(rawInput: ManualTopUpInput) {
   const input = manualTopUpSchema.parse(rawInput);
 
   return prisma.$transaction(async (tx) => {
-    const admin = await requireAdmin(tx, rawInput.adminEmail);
+    const admin = await requireAdmin(tx, rawInput.adminId);
     const user = await tx.user.findUnique({
       where: { id: input.userId },
       include: { wallet: true }

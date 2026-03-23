@@ -1,3 +1,4 @@
+import { AdminProfileForm } from "@/components/profile/admin-profile-form";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
@@ -104,6 +105,21 @@ export default async function ProfilePage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        {user.role === "ADMIN" ? (
+          <Card className="rounded-[32px] p-6">
+            <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">Admin identity</p>
+            <p className="mt-3 text-sm text-[var(--muted)]">
+              Admins can update their own name and email directly without OTP verification. If you change the email, sign out and sign back in afterward.
+            </p>
+            <div className="mt-5">
+              <AdminProfileForm
+                defaultName={user.name ?? "Admin"}
+                defaultEmail={user.email}
+              />
+            </div>
+          </Card>
+        ) : null}
+
         <Card className="rounded-[32px] p-6">
           <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">Change email</p>
           <p className="mt-3 text-sm text-[var(--muted)]">

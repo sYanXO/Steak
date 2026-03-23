@@ -6,6 +6,7 @@ import {
   createRecoveryRequest,
   requestEmailChange,
   requestPasswordChange,
+  updateAdminOwnProfile,
   verifyCredentialOtp
 } from "@/lib/services/profile";
 
@@ -141,5 +142,36 @@ export async function verifyCredentialOtpAction(
     }
 
     return { error: "Unable to verify OTP." };
+  }
+}
+
+export async function updateAdminOwnProfileAction(
+  _prevState: ProfileActionState,
+  formData: FormData
+): Promise<ProfileActionState> {
+  const session = await auth();
+
+  if (!session?.user?.id || session.user.role !== "ADMIN") {
+    return { error: "Admin authorization required." };
+  }
+
+  try {
+    const user = await updateAdminOwnProfile({
+      userId: session.user.id,
+      name: String(formData.get("name") ?? ""),
+      email: String(formData.get("email") ?? "")
+    });
+
+    revalidatePath("/profile");
+
+    return {
+      success: `Profile updated for ${user.email}. Sign out and sign back in to refresh your session email.`
+    };
+  } catch (error) {
+    if (error instanceof Error) {
+      return { error: error.message };
+    }
+
+    return { error: "Unable to update admin profile." };
   }
 }

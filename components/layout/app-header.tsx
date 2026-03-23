@@ -18,7 +18,7 @@ export async function AppHeader() {
           {isAuthenticated ? <HeaderNav isAdmin={isAdmin} /> : null}
         </div>
 
-        <HeaderActions isAuthenticated={isAuthenticated} />
+        <HeaderActions isAuthenticated={isAuthenticated} isAdmin={isAdmin} />
       </div>
     </header>
   );

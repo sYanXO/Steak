@@ -60,7 +60,7 @@ test("manualTopUp credits wallet and records ledger plus admin log", async () =>
   mockPrismaTransaction(tx);
 
   const result = await manualTopUp({
-    adminEmail: "admin@stakeipl.app",
+    adminId: "admin-1",
     userId: "user-1",
     amount: 75,
     reason: "Support correction"
@@ -105,7 +105,7 @@ test("updateMarketStatus changes status and records an audit log", async () => {
   mockPrismaTransaction(tx);
 
   const result = await updateMarketStatus({
-    adminEmail: "admin@stakeipl.app",
+    adminId: "admin-1",
     marketId: "market-1",
     status: "OPEN"
   });

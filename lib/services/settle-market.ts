@@ -8,7 +8,7 @@ import { settleMarketSchema } from "@/lib/validation/admin";
 export type SettleMarketInput = {
   marketId: string;
   outcomeId: string;
-  adminEmail: string;
+  adminId: string;
 };
 
 export async function settleMarket(rawInput: SettleMarketInput) {
@@ -16,7 +16,7 @@ export async function settleMarket(rawInput: SettleMarketInput) {
 
   return prisma.$transaction(async (tx) => {
     const admin = await tx.user.findUnique({
-      where: { email: rawInput.adminEmail.toLowerCase() }
+      where: { id: rawInput.adminId }
     });
 
     if (!admin || admin.role !== "ADMIN") {
