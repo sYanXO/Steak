@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f3eb;
+  --foreground: #1f241c;
+  --font-heading: "Arial Narrow", "Franklin Gothic Medium", "Segoe UI", sans-serif;
+  --font-body: "Segoe UI", Helvetica, Arial, sans-serif;
+  --panel: rgba(255, 250, 240, 0.78);
+  --panel-strong: #fff7e7;
+  --line: rgba(31, 36, 28, 0.12);
+  --accent: #df5b2a;
+  --accent-dark: #8f2d14;
+  --muted: #5b6053;
+  --success: #1e8a58;
+  --shadow: 0 20px 60px rgba(46, 24, 12, 0.12);
+  --theme-chip: rgba(255, 255, 255, 0.72);
+  --theme-chip-hover: rgba(255, 255, 255, 0.92);
+  --theme-glow-a: rgba(223, 91, 42, 0.2);
+  --theme-glow-b: rgba(30, 138, 88, 0.16);
+  --bg-start: #fffaf0;
+  --bg-mid: #f6f3eb;
+  --bg-end: #ece8df;
+  --field-bg: rgba(255, 255, 255, 0.82);
+  --field-border: rgba(31, 36, 28, 0.14);
+  --field-placeholder: #6e7467;
+  --field-focus: rgba(223, 91, 42, 0.34);
+  --button-primary-bg: #1f241c;
+  --button-primary-fg: #ffffff;
+  --button-primary-hover: #8f2d14;
+  --button-secondary-bg: rgba(255, 255, 255, 0.75);
+  --button-secondary-hover: rgba(255, 255, 255, 0.96);
+  --surface-soft: rgba(255, 255, 255, 0.6);
+  --surface-strong: rgba(255, 255, 255, 0.7);
+  --alert-success-bg: #ecfdf3;
+  --alert-success-border: #86efac;
+  --alert-success-text: #166534;
+  --alert-error-bg: #fef2f2;
+  --alert-error-border: #fca5a5;
+  --alert-error-text: #b91c1c;
+}
+
+html.dark {
+  --background: #0d1116;
+  --foreground: #edf3ee;
+  --panel: rgba(12, 18, 24, 0.76);
+  --panel-strong: #17212b;
+  --line: rgba(220, 232, 226, 0.12);
+  --accent: #ff8f57;
+  --accent-dark: #ff6a2c;
+  --muted: #9aa79e;
+  --success: #4bc987;
+  --shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+  --theme-chip: rgba(22, 31, 40, 0.86);
+  --theme-chip-hover: rgba(33, 46, 58, 0.96);
+  --theme-glow-a: rgba(255, 122, 69, 0.2);
+  --theme-glow-b: rgba(74, 201, 135, 0.12);
+  --bg-start: #0c1218;
+  --bg-mid: #101923;
+  --bg-end: #091018;
+  --field-bg: rgba(18, 26, 34, 0.92);
+  --field-border: rgba(220, 232, 226, 0.14);
+  --field-placeholder: #7f8c84;
+  --field-focus: rgba(255, 143, 87, 0.42);
+  --button-primary-bg: #ff8f57;
+  --button-primary-fg: #101923;
+  --button-primary-hover: #ff6a2c;
+  --button-secondary-bg: rgba(22, 31, 40, 0.9);
+  --button-secondary-hover: rgba(33, 46, 58, 0.98);
+  --surface-soft: rgba(24, 34, 43, 0.78);
+  --surface-strong: rgba(27, 38, 49, 0.9);
+  --alert-success-bg: rgba(18, 50, 34, 0.9);
+  --alert-success-border: rgba(75, 201, 135, 0.4);
+  --alert-success-text: #9ae6bf;
+  --alert-error-bg: rgba(62, 20, 24, 0.92);
+  --alert-error-border: rgba(248, 113, 113, 0.4);
+  --alert-error-text: #f9b4b4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, var(--theme-glow-a), transparent 30%),
+    radial-gradient(circle at top right, var(--theme-glow-b), transparent 24%),
+    linear-gradient(180deg, var(--bg-start) 0%, var(--bg-mid) 45%, var(--bg-end) 100%);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  transition:
+    background 180ms ease,
+    color 180ms ease;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.glass-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+input,
+select,
+textarea,
+button {
+  color: inherit;
+}
+
+input,
+select,
+textarea {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--field-placeholder);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--field-focus);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--field-focus) 30%, transparent);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
