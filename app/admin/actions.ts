@@ -9,6 +9,7 @@ import {
   manualTopUp,
   updateMarketStatus
 } from "@/lib/services/admin-operations";
+import { resolveRecoveryRequest } from "@/lib/services/profile";
 import { settleMarket } from "@/lib/services/settle-market";
 
 export type SettleMarketActionState = {
@@ -223,5 +224,35 @@ export async function manualTopUpAction(
     };
   } catch (error) {
     return { error: getActionErrorMessage(error, "Unable to top up wallet.") };
+  }
+}
+
+export async function resolveRecoveryRequestAction(
+  requestId: string,
+  _prevState: AdminMutationActionState,
+  formData: FormData
+): Promise<AdminMutationActionState> {
+  const session = await auth();
+
+  if (!session?.user?.email || session.user.role !== "ADMIN") {
+    return { error: "Admin authorization required." };
+  }
+
+  try {
+    const user = await resolveRecoveryRequest({
+      requestId,
+      email: String(formData.get("email") ?? ""),
+      adminEmail: session.user.email
+    });
+
+    revalidatePath("/admin");
+    revalidatePath("/profile");
+    revalidatePath("/dashboard");
+
+    return {
+      success: `Recovery request resolved for ${user.email}.`
+    };
+  } catch (error) {
+    return { error: getActionErrorMessage(error, "Unable to resolve recovery request.") };
   }
 }

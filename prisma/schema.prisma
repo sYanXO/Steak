@@ -61,6 +61,18 @@ enum AdminActionType {
   MARKET_STATUS_CHANGED
   MARKET_SETTLED
   BALANCE_TOP_UP
+  ACCOUNT_RECOVERY_RESOLVED
+}
+
+enum RecoveryRequestStatus {
+  OPEN
+  RESOLVED
+  REJECTED
+}
+
+enum CredentialChangeType {
+  EMAIL
+  PASSWORD
 }
 
 model User {
@@ -80,6 +92,10 @@ model User {
   ledgerEntries LedgerEntry[]   @relation("LedgerEntryActor")
   accounts      Account[]
   sessions      Session[]
+  recoveryRequests AccountRecoveryRequest[]
+  credentialChangeRequests CredentialChangeRequest[]
+  lastEmailChangeAt DateTime?
+  lastPasswordChangeAt DateTime?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 }
@@ -254,4 +270,30 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model AccountRecoveryRequest {
+  id             String                @id @default(cuid())
+  userId         String
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentEmail   String
+  requestedEmail String
+  reason         String
+  status         RecoveryRequestStatus @default(OPEN)
+  resolvedAt     DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+}
+
+model CredentialChangeRequest {
+  id             String               @id @default(cuid())
+  userId         String
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           CredentialChangeType
+  targetEmail    String?
+  passwordHash   String?
+  otpCode        String
+  expiresAt      DateTime
+  verifiedAt     DateTime?
+  createdAt      DateTime             @default(now())
 }

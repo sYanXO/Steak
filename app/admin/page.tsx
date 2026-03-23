@@ -4,6 +4,7 @@ import { CreateMarketForm } from "@/components/admin/create-market-form";
 import { CreateMatchForm } from "@/components/admin/create-match-form";
 import { ManualTopUpForm } from "@/components/admin/manual-top-up-form";
 import { MarketStatusForm } from "@/components/admin/market-status-form";
+import { RecoveryRequestForm } from "@/components/admin/recovery-request-form";
 import { SettleMarketForm } from "@/components/admin/settle-market-form";
 import { Card } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
@@ -24,7 +25,7 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  const [pendingMarkets, upcomingMatches, users, recentSettlements, recentTopUps, userCount, totalLedgerVolume] = await Promise.all([
+  const [pendingMarkets, upcomingMatches, users, recentSettlements, recentTopUps, recoveryRequests, userCount, totalLedgerVolume] = await Promise.all([
     prisma.market.findMany({
       where: {
         OR: [{ status: "DRAFT" }, { status: "OPEN" }, { status: "CLOSED" }]
@@ -104,6 +105,24 @@ export default async function AdminPage() {
             user: {
               select: { email: true, name: true }
             }
+          }
+        }
+      }
+    }),
+    prisma.accountRecoveryRequest.findMany({
+      where: { status: "OPEN" },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        currentEmail: true,
+        requestedEmail: true,
+        reason: true,
+        createdAt: true,
+        user: {
+          select: {
+            name: true,
+            email: true
           }
         }
       }
@@ -227,6 +246,43 @@ export default async function AdminPage() {
               label: user.name ?? user.email ?? "User"
             }))}
           />
+        </div>
+      </Card>
+
+      <Card className="mt-6 rounded-[32px] p-6 md:p-8">
+        <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
+          Recovery requests
+        </p>
+        <div className="mt-4 space-y-3">
+          {recoveryRequests.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">No open recovery requests.</p>
+          ) : (
+            recoveryRequests.map((request) => (
+              <div
+                key={request.id}
+                className="rounded-[22px] border border-[var(--line)] bg-[var(--surface-strong)] p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium">
+                      {request.user.name ?? request.user.email ?? "User"}
+                    </p>
+                    <p className="text-sm text-[var(--muted)]">
+                      Current: {request.currentEmail} • Requested: {request.requestedEmail}
+                    </p>
+                    <p className="mt-2 text-sm text-[var(--muted)]">{request.reason}</p>
+                  </div>
+                  <p className="text-sm text-[var(--muted)]">
+                    {formatUtcDateTime(request.createdAt)}
+                  </p>
+                </div>
+                <RecoveryRequestForm
+                  requestId={request.id}
+                  requestedEmail={request.requestedEmail}
+                />
+              </div>
+            ))
+          )}
         </div>
       </Card>
 

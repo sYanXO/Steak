@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { formatCoins, formatRelativeDelta, formatUtcDateTime } from "@/lib/format";
@@ -17,6 +19,8 @@ export default async function DashboardPage() {
     where: { id: session.user.id },
     select: {
       id: true,
+      name: true,
+      email: true,
       wallet: {
         select: {
           balance: true,
@@ -91,10 +95,22 @@ export default async function DashboardPage() {
     <main className="app-shell py-8">
       <div className="grid gap-6 lg:grid-cols-[1.25fr_0.9fr]">
         <Card className="rounded-[32px] p-6 md:p-8">
-          <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
-            Personal dashboard
-          </p>
-          <h1 className="mt-2 text-3xl font-bold">Your active IPL position</h1>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
+                Personal dashboard
+              </p>
+              <h1 className="mt-2 text-3xl font-bold">
+                Welcome back, {user.name ?? user.email.split("@")[0]}.
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm text-[var(--muted)]">
+                Your account is active, ledger-backed, and ready for the next market move.
+              </p>
+            </div>
+            <Button asChild variant="secondary" className="md:mt-1">
+              <Link href="/profile">My profile</Link>
+            </Button>
+          </div>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             <Stat
               title="Balance"

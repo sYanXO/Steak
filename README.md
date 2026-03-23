@@ -26,9 +26,16 @@ DATABASE_URL="postgresql://..."
 AUTH_SECRET="replace-with-a-long-random-secret"
 AUTH_GOOGLE_ID=""
 AUTH_GOOGLE_SECRET=""
+SMTP_HOST=""
+SMTP_PORT="587"
+SMTP_SECURE="false"
+SMTP_USER=""
+SMTP_PASS=""
+SMTP_FROM=""
 ```
 
 Google auth is optional. If `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` are blank, the UI hides the Google sign-in button.
+OTP-backed self-service email/password changes require the SMTP env vars above.
 
 ## Install
 
