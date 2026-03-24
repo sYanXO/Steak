@@ -90,6 +90,12 @@ async function main() {
     });
 
     if (seedOutcomes.length === 2) {
+      await tx.outcomeOddsSnapshot.deleteMany({
+        where: {
+          marketId: "seed-market-mi-csk-winner"
+        }
+      });
+
       await tx.marketOutcome.update({
         where: { id: seedOutcomes[0].id },
         data: {
@@ -104,6 +110,28 @@ async function main() {
           totalStaked: 10100,
           currentOdds: 2.17
         }
+      });
+
+      const baseRecordedAt = new Date("2026-03-24T12:30:00.000Z");
+      const timeline = [
+        { offsetMinutes: 0, odds: [2.08, 1.96] },
+        { offsetMinutes: 15, odds: [2.02, 2.01] },
+        { offsetMinutes: 30, odds: [1.95, 2.08] },
+        { offsetMinutes: 45, odds: [1.9, 2.12] },
+        { offsetMinutes: 60, odds: [1.86, 2.15] },
+        { offsetMinutes: 75, odds: [1.82, 2.17] }
+      ] as const;
+
+      await tx.outcomeOddsSnapshot.createMany({
+        data: timeline.flatMap((point) =>
+          seedOutcomes.map((outcome, index) => ({
+            marketId: "seed-market-mi-csk-winner",
+            outcomeId: outcome.id,
+            oddsValue: point.odds[index],
+            totalStaked: index === 0 ? 12400 : 10100,
+            recordedAt: new Date(baseRecordedAt.getTime() + point.offsetMinutes * 60_000)
+          }))
+        )
       });
     }
 

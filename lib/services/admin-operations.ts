@@ -4,6 +4,7 @@ import {
   recomputeAllGroupLeaderboards,
   recomputeGlobalLeaderboard
 } from "@/lib/services/leaderboard";
+import { recordMarketOutcomeSnapshots } from "@/lib/services/market-odds-history";
 import {
   createMarketSchema,
   createMatchSchema,
@@ -171,6 +172,17 @@ export async function createMarket(rawInput: CreateMarketInput) {
         }
       }
     });
+
+    await recordMarketOutcomeSnapshots(
+      tx,
+      market.outcomes.map((outcome) => ({
+        marketId: market.id,
+        outcomeId: outcome.id,
+        currentOdds: outcome.currentOdds,
+        totalStaked: outcome.totalStaked
+      })),
+      opensAt
+    );
 
     return market;
   });

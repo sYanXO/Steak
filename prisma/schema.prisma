@@ -149,6 +149,7 @@ model Market {
   settledOutcomeId   String?
   pricingMetadata    Json?
   outcomes           MarketOutcome[]
+  oddsSnapshots      OutcomeOddsSnapshot[]
   stakes             Stake[]
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
@@ -165,8 +166,23 @@ model MarketOutcome {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   stakes       Stake[]
+  oddsSnapshots OutcomeOddsSnapshot[]
 
   @@unique([marketId, label])
+}
+
+model OutcomeOddsSnapshot {
+  id          String        @id @default(cuid())
+  marketId    String
+  market      Market        @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  outcomeId   String
+  outcome     MarketOutcome @relation(fields: [outcomeId], references: [id], onDelete: Cascade)
+  oddsValue   Decimal       @db.Decimal(10, 4)
+  totalStaked Int
+  recordedAt  DateTime      @default(now())
+
+  @@index([marketId, recordedAt])
+  @@index([outcomeId, recordedAt])
 }
 
 model Stake {

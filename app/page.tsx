@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Trophy, Wallet } from "lucide-react";
+import { ShieldCheck, Trophy, Wallet } from "lucide-react";
+import { auth } from "@/auth";
+import { LandingOddsChart } from "@/components/home/landing-odds-chart";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getHomepageData } from "@/lib/data/public";
@@ -8,7 +10,9 @@ import { formatCoins, formatOdds, formatUtcDateTime } from "@/lib/format";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const { userCount, openMarkets, totalStaked } = await getHomepageData();
+  const session = await auth();
+  const { userCount, openMarkets, featuredMarket, totalStaked } = await getHomepageData();
+  const isAuthenticated = Boolean(session?.user);
 
   const statCards = [
     {
@@ -44,22 +48,9 @@ export default async function HomePage() {
                 Simulated markets, public leaderboards, zero real-money flows.
               </h1>
             </div>
-            <div className="flex gap-3">
-              <Button
-                asChild
-                className="bg-[var(--accent)] text-white hover:bg-[var(--accent-dark)]"
-              >
-                <Link href="/sign-in" className="text-white">
-                  Sign in
-                </Link>
-              </Button>
-              <Button asChild variant="secondary" className="text-[var(--foreground)]">
-                <Link href="/dashboard" className="text-[var(--foreground)]">
-                  Explore demo
-                  <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            </div>
+            {!isAuthenticated ? (
+              <LandingOddsChart market={featuredMarket ?? openMarkets[0] ?? null} />
+            ) : null}
           </div>
         </header>
 

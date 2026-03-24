@@ -4,6 +4,7 @@ import {
   recomputeAllGroupLeaderboards,
   recomputeGlobalLeaderboard
 } from "@/lib/services/leaderboard";
+import { recordMarketOutcomeSnapshots } from "@/lib/services/market-odds-history";
 import { placeStakeSchema } from "@/lib/validation/stake";
 
 const VIRTUAL_LIQUIDITY = 1000;
@@ -143,7 +144,7 @@ export async function placeStake(rawInput: PlaceStakeInput) {
       0
     );
 
-    await Promise.all(
+    const repricedOutcomes = await Promise.all(
       updatedOutcomes.map((outcome) => {
         const adjustedStake = outcome.totalStaked + VIRTUAL_LIQUIDITY;
         const repricedOdds = Math.max(1.01, totalAdjustedPool / adjustedStake);
@@ -156,6 +157,16 @@ export async function placeStake(rawInput: PlaceStakeInput) {
           }
         });
       })
+    );
+
+    await recordMarketOutcomeSnapshots(
+      tx,
+      repricedOutcomes.map((outcome) => ({
+        marketId: outcome.marketId,
+        outcomeId: outcome.id,
+        currentOdds: outcome.currentOdds,
+        totalStaked: outcome.totalStaked
+      }))
     );
 
     await recomputeGlobalLeaderboard(tx);
