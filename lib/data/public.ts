@@ -1,8 +1,37 @@
 import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
+export type HomepageOutcome = {
+  id: string;
+  label: string;
+  currentOdds: number;
+  totalStaked: number;
+  oddsSnapshots: Array<{
+    recordedAt: string;
+    oddsValue: number;
+  }>;
+};
+
+export type HomepageMarket = {
+  id: string;
+  title: string;
+  closesAt: string;
+  match: {
+    homeTeam: string;
+    awayTeam: string;
+  };
+  outcomes: HomepageOutcome[];
+};
+
+export type HomepageData = {
+  userCount: number;
+  openMarkets: HomepageMarket[];
+  featuredMarket: HomepageMarket | null;
+  totalStaked: number;
+};
+
 export const getHomepageData = unstable_cache(
-  async () => {
+  async (): Promise<HomepageData> => {
     const [userCount, openMarkets, totalStaked] = await Promise.all([
       prisma.user.count(),
       prisma.market.findMany({
@@ -43,7 +72,7 @@ export const getHomepageData = unstable_cache(
       })
     ]);
 
-    const mappedOpenMarkets = openMarkets.map((market) => ({
+    const mappedOpenMarkets: HomepageMarket[] = openMarkets.map((market) => ({
       id: market.id,
       title: market.title,
       closesAt: market.closesAt.toISOString(),
@@ -63,7 +92,7 @@ export const getHomepageData = unstable_cache(
       }))
     }));
 
-    const featuredMarket =
+    const featuredMarket: HomepageMarket | null =
       mappedOpenMarkets
         .slice()
         .sort((left, right) => {
