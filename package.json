@@ -21,8 +21,7 @@
     "prisma:seed:local-demo": "SEED_PROFILE=local-demo tsx prisma/seed.ts",
     "prisma:seed:staging": "SEED_PROFILE=staging-demo tsx prisma/seed.ts",
     "prisma:seed:production-safe": "SEED_PROFILE=production-safe tsx prisma/seed.ts",
-    "db:audit-request-constraints": "tsx prisma/audit-request-constraints.ts",
-    "benchmark": "node --import tsx scripts/benchmark.ts"
+    "db:audit-request-constraints": "tsx prisma/audit-request-constraints.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
