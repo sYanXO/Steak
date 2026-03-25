@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { consumeSignUpAttempt, formatRetryMessage } from "@/lib/rate-limit";
 import { registerUser } from "@/lib/services/register-user";
 import { signUpSchema } from "@/lib/validation/auth";
 
@@ -24,6 +25,14 @@ export async function signUpAction(
   if (!parsed.success) {
     return {
       error: parsed.error.issues[0]?.message ?? "Unable to create your account."
+    };
+  }
+
+  const rateLimit = consumeSignUpAttempt(parsed.data.email);
+
+  if (!rateLimit.allowed) {
+    return {
+      error: formatRetryMessage("sign-up", rateLimit.retryAfterSeconds)
     };
   }
 

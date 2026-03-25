@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { settleMarketAction, type SettleMarketActionState } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 
@@ -17,9 +17,17 @@ type SettleMarketFormProps = {
 export function SettleMarketForm({ marketId, outcomes }: SettleMarketFormProps) {
   const action = settleMarketAction.bind(null, marketId);
   const [state, formAction, pending] = useActionState(action, initialState);
+  const requestIdRef = useRef(crypto.randomUUID());
+
+  useEffect(() => {
+    if (state.success) {
+      requestIdRef.current = crypto.randomUUID();
+    }
+  }, [state.success]);
 
   return (
     <form action={formAction} className="mt-4 space-y-3">
+      <input type="hidden" name="requestId" value={requestIdRef.current} />
       <label className="block text-sm font-medium">
         Winning outcome
         <select

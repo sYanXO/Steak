@@ -16,15 +16,18 @@ type ManualTopUpFormProps = {
 export function ManualTopUpForm({ users }: ManualTopUpFormProps) {
   const [state, formAction, pending] = useActionState(manualTopUpAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
+  const requestIdRef = useRef(crypto.randomUUID());
 
   useEffect(() => {
     if (state.success) {
       formRef.current?.reset();
+      requestIdRef.current = crypto.randomUUID();
     }
   }, [state.success]);
 
   return (
     <form ref={formRef} action={formAction} className="space-y-4">
+      <input type="hidden" name="requestId" value={requestIdRef.current} />
       <label className="block text-sm font-medium">
         User
         <select

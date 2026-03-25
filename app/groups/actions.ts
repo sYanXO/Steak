@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { consumeGroupJoinAttempt, formatRetryMessage } from "@/lib/rate-limit";
 import { createGroup, joinGroup } from "@/lib/services/groups";
 
 export type GroupActionState = {
@@ -52,6 +53,12 @@ export async function joinGroupAction(
   }
 
   try {
+    const rateLimit = consumeGroupJoinAttempt(session.user.email, String(formData.get("slug") ?? ""));
+
+    if (!rateLimit.allowed) {
+      return { error: formatRetryMessage("group join", rateLimit.retryAfterSeconds) };
+    }
+
     const group = await joinGroup({
       userEmail: session.user.email,
       slug: String(formData.get("slug") ?? "")

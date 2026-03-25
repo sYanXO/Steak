@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const actionRequestIdSchema = z.string().trim().uuid("Invalid submission token.");
+
 export const settleMarketSchema = z.object({
   marketId: z.string().min(1, "Invalid market selection."),
   outcomeId: z.string().min(1, "Invalid outcome selection.")

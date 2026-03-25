@@ -5,6 +5,10 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import {
+  consumeSignInAttempt,
+  resetSignInAttempts
+} from "@/lib/rate-limit";
 import { signInSchema } from "@/lib/validation/auth";
 
 export const authConfig = {
@@ -27,6 +31,12 @@ export const authConfig = {
       },
       async authorize(rawCredentials) {
         const credentials = signInSchema.parse(rawCredentials);
+        const rateLimit = consumeSignInAttempt(credentials.email);
+
+        if (!rateLimit.allowed) {
+          return null;
+        }
+
         const user = await prisma.user.findUnique({
           where: { email: credentials.email.toLowerCase() }
         });
@@ -40,6 +50,8 @@ export const authConfig = {
         if (!isValid) {
           return null;
         }
+
+        resetSignInAttempts(credentials.email);
 
         return {
           id: user.id,

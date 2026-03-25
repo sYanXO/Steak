@@ -18,7 +18,8 @@
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:seed:local-demo": "SEED_PROFILE=local-demo tsx prisma/seed.ts",
     "prisma:seed:staging": "SEED_PROFILE=staging-demo tsx prisma/seed.ts",
-    "prisma:seed:production-safe": "SEED_PROFILE=production-safe tsx prisma/seed.ts"
+    "prisma:seed:production-safe": "SEED_PROFILE=production-safe tsx prisma/seed.ts",
+    "db:audit-request-constraints": "tsx prisma/audit-request-constraints.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

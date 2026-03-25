@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { ZodError } from "zod";
 import { auth } from "@/auth";
 import { cacheTags } from "@/lib/cache-tags";
+import { runIdempotent } from "@/lib/idempotency";
 import {
   createMarket,
   createMatch,
@@ -12,6 +13,7 @@ import {
   updateMarketStatus
 } from "@/lib/services/admin-operations";
 import { resolveRecoveryRequest } from "@/lib/services/profile";
+import { actionRequestIdSchema } from "@/lib/validation/admin";
 import { settleMarket } from "@/lib/services/settle-market";
 
 export type SettleMarketActionState = {
@@ -79,6 +81,10 @@ function normalizeDateTimeLocal(value: FormDataEntryValue | null) {
   return parsed.toISOString();
 }
 
+function getRequestId(formData: FormData) {
+  return actionRequestIdSchema.parse(String(formData.get("requestId") ?? ""));
+}
+
 export async function settleMarketAction(
   marketId: string,
   _prevState: SettleMarketActionState,
@@ -91,11 +97,14 @@ export async function settleMarketAction(
   }
 
   try {
-    const result = await settleMarket({
-      marketId,
-      outcomeId: String(formData.get("outcomeId") ?? ""),
-      adminId: session.user.id
-    });
+    const requestId = getRequestId(formData);
+    const result = await runIdempotent(`settle:${session.user.id}:${requestId}`, () =>
+      settleMarket({
+        marketId,
+        outcomeId: String(formData.get("outcomeId") ?? ""),
+        adminId: session.user.id
+      })
+    );
 
     revalidatePath("/");
     revalidatePath("/dashboard");
@@ -233,11 +242,14 @@ export async function updateMarketStatusAction(
   }
 
   try {
-    const market = await updateMarketStatus({
-      marketId,
-      status: String(formData.get("status") ?? "") as "DRAFT" | "OPEN" | "CLOSED" | "VOID",
-      adminId: session.user.id
-    });
+    const requestId = getRequestId(formData);
+    const market = await runIdempotent(`market-status:${session.user.id}:${requestId}`, () =>
+      updateMarketStatus({
+        marketId,
+        status: String(formData.get("status") ?? "") as "DRAFT" | "OPEN" | "CLOSED" | "VOID",
+        adminId: session.user.id
+      })
+    );
 
     revalidatePath("/");
     revalidatePath("/admin");
@@ -269,12 +281,15 @@ export async function manualTopUpAction(
   }
 
   try {
-    const result = await manualTopUp({
-      userId: String(formData.get("userId") ?? ""),
-      amount: Number(formData.get("amount") ?? 0),
-      reason: String(formData.get("reason") ?? ""),
-      adminId: session.user.id
-    });
+    const requestId = getRequestId(formData);
+    const result = await runIdempotent(`top-up:${session.user.id}:${requestId}`, () =>
+      manualTopUp({
+        userId: String(formData.get("userId") ?? ""),
+        amount: Number(formData.get("amount") ?? 0),
+        reason: String(formData.get("reason") ?? ""),
+        adminId: session.user.id
+      })
+    );
 
     revalidatePath("/dashboard");
     revalidatePath("/admin");

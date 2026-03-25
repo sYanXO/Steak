@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { updateMarketStatusAction, type AdminMutationActionState } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 
@@ -14,12 +14,20 @@ type MarketStatusFormProps = {
 export function MarketStatusForm({ marketId, currentStatus }: MarketStatusFormProps) {
   const action = updateMarketStatusAction.bind(null, marketId);
   const [state, formAction, pending] = useActionState(action, initialState);
+  const requestIdRef = useRef(crypto.randomUUID());
   const allowedStatuses = ["DRAFT", "OPEN", "CLOSED", "VOID"];
   const defaultStatus = allowedStatuses.includes(currentStatus) ? currentStatus : "CLOSED";
   const isVoidSelection = defaultStatus === "VOID";
 
+  useEffect(() => {
+    if (state.success) {
+      requestIdRef.current = crypto.randomUUID();
+    }
+  }, [state.success]);
+
   return (
     <form action={formAction} className="mt-4 space-y-3">
+      <input type="hidden" name="requestId" value={requestIdRef.current} />
       <label className="block text-sm font-medium">
         Market status
         <select

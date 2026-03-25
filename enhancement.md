@@ -57,6 +57,22 @@
 - Added production-safe seeding behavior that skips demo data and points operators to `bootstrap:admin`.
 - Documented the new seed commands and profile expectations in the README.
 
+## Database Hardening
+
+- Added indexes for the main market, match, stake, leaderboard, ledger, admin-log, recovery-request, and credential-change query paths.
+- Added partial unique indexes to enforce one open recovery request per user and one unverified credential-change request per user/type at the database layer.
+- Added a database audit command to verify those partial unique indexes are safe to apply before deployment.
+
+## Safety Controls
+
+- Added lightweight server-side rate limiting for sign-up attempts keyed by normalized email.
+- Added lightweight server-side rate limiting for credentials sign-in attempts with reset on successful sign-in.
+- Added lightweight server-side rate limiting for group joins scoped by user and target group slug.
+- Added unit coverage for limiter thresholds and reset behavior.
+- Added idempotency guards for admin settlement, top-up, and market status actions using per-submit request tokens.
+- Added unit coverage for idempotent action replay and retry-after-failure behavior.
+- Added contract-style ledger invariant tests covering top-ups, stake debits, settlement credits, and void refunds.
+
 ## Cache and Performance
 
 - Added shared cache tags for homepage, admin, market, and dashboard invalidation paths.

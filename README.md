@@ -79,6 +79,7 @@ npm run prisma:seed:local-demo
 npm run prisma:seed:staging
 npm run prisma:seed:production-safe
 npm run prisma:generate
+npm run db:audit-request-constraints
 npm run bootstrap:admin
 ```
 
@@ -91,6 +92,15 @@ npm run bootstrap:admin
 - `production-safe`: skips demo data and prints a reminder to use `npm run bootstrap:admin`
 
 `npm run db:reset-demo` is local-profile specific and expects the default `local-demo` seed data.
+
+Before deploying the migration that adds partial unique indexes for open recovery requests and pending credential-change requests, audit the target database with:
+
+```bash
+set -a && source .env.local
+npm run db:audit-request-constraints
+```
+
+If that command reports `safeToApplyConstraintMigration: true`, `prisma migrate deploy` should apply the new constraint migration without duplicate-row failures.
 
 ## Demo accounts
 

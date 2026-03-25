@@ -123,6 +123,9 @@ model LedgerEntry {
   actorId         String?
   actor           User?           @relation("LedgerEntryActor", fields: [actorId], references: [id], onDelete: SetNull)
   createdAt       DateTime        @default(now())
+
+  @@index([walletId, createdAt])
+  @@index([type, createdAt])
 }
 
 model Match {
@@ -135,6 +138,8 @@ model Match {
   markets     Market[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
+  @@index([status, startsAt])
 }
 
 model Market {
@@ -154,6 +159,9 @@ model Market {
   stakes             Stake[]
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
+
+  @@index([status, closesAt])
+  @@index([matchId, status])
 }
 
 model MarketOutcome {
@@ -203,6 +211,8 @@ model Stake {
   createdAt         DateTime    @default(now())
 
   @@unique([userId, marketId])
+  @@index([marketId, result])
+  @@index([userId, result, createdAt])
 }
 
 model Group {
@@ -226,6 +236,7 @@ model GroupMember {
   createdAt DateTime @default(now())
 
   @@unique([groupId, userId])
+  @@index([groupId, createdAt])
 }
 
 model LeaderboardEntry {
@@ -241,6 +252,10 @@ model LeaderboardEntry {
   seasonKey   String?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+
+  @@index([scope, rank, createdAt])
+  @@index([groupId, scope, rank])
+  @@index([userId, scope])
 }
 
 model AdminActionLog {
@@ -253,6 +268,9 @@ model AdminActionLog {
   reason       String
   metadata     Json?
   createdAt    DateTime        @default(now())
+
+  @@index([actionType, createdAt])
+  @@index([adminId, createdAt])
 }
 
 model Account {
@@ -300,6 +318,9 @@ model AccountRecoveryRequest {
   resolvedAt     DateTime?
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
+
+  @@index([status, createdAt])
+  @@index([userId, status])
 }
 
 model CredentialChangeRequest {
@@ -313,4 +334,7 @@ model CredentialChangeRequest {
   expiresAt      DateTime
   verifiedAt     DateTime?
   createdAt      DateTime             @default(now())
+
+  @@index([userId, type, verifiedAt])
+  @@index([expiresAt])
 }
