@@ -267,3 +267,98 @@ test("updateMatch edits the fixture and records an audit log", async () => {
   assert.equal(result.homeTeam, "MI");
   assert.equal(adminLogs[0]?.actionType, "MATCH_UPDATED");
 });
+
+test("updateMatch archives a fixture with no active markets", async () => {
+  const adminLogs: Array<Record<string, unknown>> = [];
+
+  const tx = {
+    user: {
+      async findUnique() {
+        return { id: "admin-1", role: "ADMIN" };
+      }
+    },
+    match: {
+      async findUnique() {
+        return {
+          id: "match-1",
+          title: "Archive me",
+          homeTeam: "Mumbai Indians",
+          awayTeam: "Chennai Super Kings",
+          startsAt: new Date("2026-03-30T12:30:00.000Z"),
+          status: "COMPLETED",
+          markets: []
+        };
+      },
+      async update({ data }: { data: Record<string, unknown> }) {
+        return {
+          id: "match-1",
+          title: data.title,
+          homeTeam: data.homeTeam,
+          awayTeam: data.awayTeam,
+          startsAt: data.startsAt,
+          status: data.status
+        };
+      }
+    },
+    adminActionLog: {
+      async create({ data }: { data: Record<string, unknown> }) {
+        adminLogs.push(data);
+        return {};
+      }
+    }
+  };
+
+  mockPrismaTransaction(tx);
+
+  const result = await updateMatch({
+    adminId: "admin-1",
+    matchId: "match-1",
+    title: "Archive me",
+    homeTeam: "Mumbai Indians",
+    awayTeam: "Chennai Super Kings",
+    startsAt: "2026-03-30T13:00:00.000Z",
+    status: "ARCHIVED"
+  });
+
+  assert.equal(result.status, "ARCHIVED");
+  assert.equal(adminLogs[0]?.actionType, "MATCH_UPDATED");
+});
+
+test("updateMatch rejects archiving while active markets still exist", async () => {
+  const tx = {
+    user: {
+      async findUnique() {
+        return { id: "admin-1", role: "ADMIN" };
+      }
+    },
+    match: {
+      async findUnique() {
+        return {
+          id: "match-1",
+          title: "Busy fixture",
+          homeTeam: "Mumbai Indians",
+          awayTeam: "Chennai Super Kings",
+          startsAt: new Date("2026-03-30T12:30:00.000Z"),
+          status: "COMPLETED",
+          markets: [{ id: "market-1", title: "Match winner", closesAt: new Date("2026-03-30T12:00:00.000Z") }]
+        };
+      }
+    }
+  };
+
+  mockPrismaTransaction(tx);
+
+  await assert.rejects(
+    () =>
+      updateMatch({
+        adminId: "admin-1",
+        matchId: "match-1",
+        title: "Busy fixture",
+        homeTeam: "Mumbai Indians",
+        awayTeam: "Chennai Super Kings",
+        startsAt: "2026-03-30T13:00:00.000Z",
+        status: "ARCHIVED"
+      }),
+    /Archive is only allowed after all linked markets are finalized or removed\./
+  );
+});

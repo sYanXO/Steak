@@ -30,6 +30,7 @@ enum MatchStatus {
   LIVE
   COMPLETED
   CANCELLED
+  ARCHIVED
 }
 
 enum LedgerEntryType {

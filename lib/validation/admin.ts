@@ -18,7 +18,7 @@ export const updateMatchSchema = z.object({
   homeTeam: z.string().trim().min(2, "Home team is too short.").max(60),
   awayTeam: z.string().trim().min(2, "Away team is too short.").max(60),
   startsAt: z.string().datetime("Enter a valid datetime."),
-  status: z.enum(["SCHEDULED", "LIVE", "COMPLETED", "CANCELLED"], {
+  status: z.enum(["SCHEDULED", "LIVE", "COMPLETED", "CANCELLED", "ARCHIVED"], {
     message: "Invalid match status."
   })
 });

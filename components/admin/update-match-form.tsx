@@ -13,11 +13,11 @@ type UpdateMatchFormProps = {
     homeTeam: string;
     awayTeam: string;
     startsAtLocalValue: string;
-    status: "SCHEDULED" | "LIVE" | "COMPLETED" | "CANCELLED";
+    status: "SCHEDULED" | "LIVE" | "COMPLETED" | "CANCELLED" | "ARCHIVED";
   };
 };
 
-const matchStatuses = ["SCHEDULED", "LIVE", "COMPLETED", "CANCELLED"] as const;
+const matchStatuses = ["SCHEDULED", "LIVE", "COMPLETED", "CANCELLED", "ARCHIVED"] as const;
 
 export function UpdateMatchForm({ match }: UpdateMatchFormProps) {
   const action = updateMatchAction.bind(null, match.id);

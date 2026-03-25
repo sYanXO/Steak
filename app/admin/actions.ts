@@ -203,7 +203,8 @@ export async function updateMatchAction(
         | "SCHEDULED"
         | "LIVE"
         | "COMPLETED"
-        | "CANCELLED",
+        | "CANCELLED"
+        | "ARCHIVED",
       adminId: session.user.id
     });
 

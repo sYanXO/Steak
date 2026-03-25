@@ -10,6 +10,7 @@ type AdminPageDataInput = {
   settlementsPage: number;
   topUpsPage: number;
   pageSize: number;
+  searchTerm: string;
 };
 
 export const getAdminPageData = unstable_cache(
@@ -19,8 +20,12 @@ export const getAdminPageData = unstable_cache(
     recoveryPage,
     settlementsPage,
     topUpsPage,
-    pageSize
+    pageSize,
+    searchTerm
   }: AdminPageDataInput) => {
+    const trimmedSearchTerm = searchTerm.trim();
+    const hasSearch = trimmedSearchTerm.length > 0;
+
     return measureAsync(
       "admin.page-data",
       async () =>
@@ -61,6 +66,11 @@ export const getAdminPageData = unstable_cache(
             }
           }),
           prisma.match.findMany({
+            where: {
+              status: {
+                not: "ARCHIVED"
+              }
+            },
             orderBy: [{ startsAt: "asc" }],
             skip: (matchesPage - 1) * pageSize,
             take: pageSize,
@@ -78,7 +88,13 @@ export const getAdminPageData = unstable_cache(
               }
             }
           }),
-          prisma.match.count(),
+          prisma.match.count({
+            where: {
+              status: {
+                not: "ARCHIVED"
+              }
+            }
+          }),
           prisma.user.findMany({
             orderBy: [{ createdAt: "asc" }],
             take: 20,
@@ -164,9 +180,189 @@ export const getAdminPageData = unstable_cache(
             _sum: {
               amountDelta: true
             }
-          })
+          }),
+          hasSearch
+            ? prisma.user.findMany({
+                where: {
+                  OR: [
+                    {
+                      name: {
+                        contains: trimmedSearchTerm,
+                        mode: "insensitive"
+                      }
+                    },
+                    {
+                      email: {
+                        contains: trimmedSearchTerm,
+                        mode: "insensitive"
+                      }
+                    }
+                  ]
+                },
+                orderBy: [{ createdAt: "desc" }],
+                take: 5,
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  role: true,
+                  wallet: {
+                    select: {
+                      balance: true
+                    }
+                  }
+                }
+              })
+            : Promise.resolve([]),
+          hasSearch
+            ? prisma.group.findMany({
+                where: {
+                  OR: [
+                    {
+                      name: {
+                        contains: trimmedSearchTerm,
+                        mode: "insensitive"
+                      }
+                    },
+                    {
+                      slug: {
+                        contains: trimmedSearchTerm,
+                        mode: "insensitive"
+                      }
+                    }
+                  ]
+                },
+                orderBy: [{ createdAt: "desc" }],
+                take: 5,
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  owner: {
+                    select: {
+                      name: true,
+                      email: true
+                    }
+                  },
+                  _count: {
+                    select: {
+                      members: true
+                    }
+                  }
+                }
+              })
+            : Promise.resolve([]),
+          hasSearch
+            ? prisma.match.findMany({
+                where: {
+                  status: {
+                    not: "ARCHIVED"
+                  },
+                  OR: [
+                    {
+                      title: {
+                        contains: trimmedSearchTerm,
+                        mode: "insensitive"
+                      }
+                    },
+                    {
+                      homeTeam: {
+                        contains: trimmedSearchTerm,
+                        mode: "insensitive"
+                      }
+                    },
+                    {
+                      awayTeam: {
+                        contains: trimmedSearchTerm,
+                        mode: "insensitive"
+                      }
+                    }
+                  ]
+                },
+                orderBy: [{ startsAt: "asc" }],
+                take: 5,
+                select: {
+                  id: true,
+                  title: true,
+                  homeTeam: true,
+                  awayTeam: true,
+                  startsAt: true,
+                  status: true,
+                  _count: {
+                    select: {
+                      markets: true
+                    }
+                  }
+                }
+              })
+            : Promise.resolve([]),
+          hasSearch
+            ? prisma.market.findMany({
+                where: {
+                  OR: [
+                    {
+                      title: {
+                        contains: trimmedSearchTerm,
+                        mode: "insensitive"
+                      }
+                    },
+                    {
+                      type: {
+                        contains: trimmedSearchTerm,
+                        mode: "insensitive"
+                      }
+                    },
+                    {
+                      match: {
+                        title: {
+                          contains: trimmedSearchTerm,
+                          mode: "insensitive"
+                        }
+                      }
+                    },
+                    {
+                      match: {
+                        homeTeam: {
+                          contains: trimmedSearchTerm,
+                          mode: "insensitive"
+                        }
+                      }
+                    },
+                    {
+                      match: {
+                        awayTeam: {
+                          contains: trimmedSearchTerm,
+                          mode: "insensitive"
+                        }
+                      }
+                    }
+                  ]
+                },
+                orderBy: [{ closesAt: "asc" }],
+                take: 5,
+                select: {
+                  id: true,
+                  title: true,
+                  type: true,
+                  status: true,
+                  closesAt: true,
+                  match: {
+                    select: {
+                      title: true,
+                      homeTeam: true,
+                      awayTeam: true
+                    }
+                  },
+                  _count: {
+                    select: {
+                      stakes: true
+                    }
+                  }
+                }
+              })
+            : Promise.resolve([])
         ]),
-      { pendingPage, matchesPage, recoveryPage, settlementsPage, topUpsPage }
+      { pendingPage, matchesPage, recoveryPage, settlementsPage, topUpsPage, hasSearch }
     ).then(
       ([
         pendingMarkets,
@@ -181,7 +377,11 @@ export const getAdminPageData = unstable_cache(
         recoveryRequests,
         recoveryRequestCount,
         userCount,
-        totalLedgerVolume
+        totalLedgerVolume,
+        searchUsers,
+        searchGroups,
+        searchMatches,
+        searchMarkets
       ]) => ({
         pendingMarkets,
         pendingMarketsCount,
@@ -195,7 +395,14 @@ export const getAdminPageData = unstable_cache(
         recoveryRequests,
         recoveryRequestCount,
         userCount,
-        totalLedgerVolume
+        totalLedgerVolume,
+        searchResults: {
+          term: trimmedSearchTerm,
+          users: searchUsers,
+          groups: searchGroups,
+          matches: searchMatches,
+          markets: searchMarkets
+        }
       })
     );
   },

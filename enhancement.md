@@ -7,6 +7,7 @@
 - Refunds write `SETTLEMENT_REVERSAL` ledger entries with admin attribution.
 - Refunded stakes are marked `VOID` and timestamped as settled.
 - Admin audit logs now capture refunded stake counts when a market is voided.
+- Added admin search on `/admin` for users with wallet balances, groups, markets, and active matches.
 
 ## Match Management
 
@@ -17,6 +18,8 @@
   - away team
   - match start time
   - match lifecycle status
+- Added match archiving support so completed or cancelled fixtures can be removed from active admin workflows.
+- Archiving is blocked while a match still has non-finalized markets attached.
 - Added validation to block moving a match start time earlier than linked market close times.
 - Match updates write `MATCH_UPDATED` audit logs with before/after metadata.
 
@@ -25,7 +28,10 @@
 - Added service-level test coverage for:
   - market void with refund behavior
   - match update behavior
+  - match archive behavior
+- Expanded browser e2e coverage to include admin-side match creation and market creation flows.
 - Verified build passes after the new admin and refund flows.
+- Verified TypeScript passes after admin search and match archive updates.
 
 ## UI Follow-Through
 
@@ -60,3 +66,15 @@
 - Added structured timing logs for dashboard page data loading.
 - Added structured timing logs for public market data loading.
 - Added structured timing logs for stake placement transactions.
+
+## Stability Follow-Up
+
+- Hardened shared datetime formatting so cached string timestamps no longer crash dashboard or other pages expecting `Date` objects.
+
+## Future Enhancements
+
+- Lowest priority: evaluate Docker only if it starts solving a concrete operational problem such as onboarding friction, local environment parity issues, or a future need to run outside Vercel.
+- Do not containerize the app in the current Vercel-managed setup; this is intentionally deferred to avoid overengineering.
+- When CI/CD work is revisited, keep it minimal and focused on required PR checks rather than a heavy deployment pipeline.
+- The first CI baseline should cover `npm ci`, `prisma generate`, `tsc --noEmit`, a CI-safe lint command, unit tests, and `next build`.
+- Keep Vercel responsible for preview and production deployments instead of duplicating that behavior in a custom release system.

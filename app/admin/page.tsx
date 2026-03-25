@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { CreateMarketForm } from "@/components/admin/create-market-form";
@@ -17,11 +18,26 @@ export const dynamic = "force-dynamic";
 
 const ADMIN_SECTION_PAGE_SIZE = 5;
 
+function parseSearchTerm(value: string | string[] | undefined) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function toDateTimeLocalValue(date: Date) {
   const offsetMillis = (5 * 60 + 30) * 60 * 1000;
   const shifted = new Date(date.getTime() + offsetMillis);
 
   return shifted.toISOString().slice(0, 16);
+}
+
+function renderMatchStatusDetail(status: "SCHEDULED" | "LIVE" | "COMPLETED" | "CANCELLED" | "ARCHIVED") {
+  switch (status) {
+    case "ARCHIVED":
+      return "Archived matches are removed from active admin creation and management flows.";
+    case "CANCELLED":
+      return "Cancelled fixtures stay visible until archived so markets and audit history can be reviewed.";
+    default:
+      return null;
+  }
 }
 
 export default async function AdminPage({
@@ -36,6 +52,7 @@ export default async function AdminPage({
   const recoveryPage = parsePageParam(params.recoveryPage);
   const settlementsPage = parsePageParam(params.settlementsPage);
   const topUpsPage = parsePageParam(params.topUpsPage);
+  const searchTerm = parseSearchTerm(params.q);
 
   if (!session?.user) {
     redirect("/sign-in");
@@ -60,14 +77,16 @@ export default async function AdminPage({
     recoveryRequests,
     recoveryRequestCount,
     userCount,
-    totalLedgerVolume
+    totalLedgerVolume,
+    searchResults
   } = await getAdminPageData({
     pendingPage,
     matchesPage,
     recoveryPage,
     settlementsPage,
     topUpsPage,
-    pageSize: ADMIN_SECTION_PAGE_SIZE
+    pageSize: ADMIN_SECTION_PAGE_SIZE,
+    searchTerm
   });
 
   return (
@@ -81,7 +100,73 @@ export default async function AdminPage({
           Access is enforced on the server, and this view now reads live operational data
           from the database instead of static placeholders.
         </p>
+        <form method="get" className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_auto]">
+          <input
+            type="search"
+            name="q"
+            defaultValue={searchTerm}
+            placeholder="Search users, wallets, groups, markets, or matches"
+            className="w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 outline-none"
+          />
+          <button
+            type="submit"
+            className="rounded-2xl border border-[var(--line)] bg-[var(--panel-strong)] px-4 py-3 text-sm font-semibold"
+          >
+            Search admin
+          </button>
+          <Link
+            href="/admin"
+            className="rounded-2xl border border-[var(--line)] px-4 py-3 text-center text-sm font-semibold"
+          >
+            Clear
+          </Link>
+        </form>
       </Card>
+
+      {searchResults.term ? (
+        <Card className="mt-6 rounded-[32px] p-6 md:p-8">
+          <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">Admin search</p>
+          <h2 className="mt-2 text-2xl font-bold">Results for "{searchResults.term}"</h2>
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <SearchSection
+              title="Users and wallets"
+              emptyMessage="No users or wallet owners matched."
+              items={searchResults.users.map((user) => ({
+                id: user.id,
+                title: user.name ?? user.email,
+                detail: `${user.email} • ${user.role} • Balance ${formatCoins(user.wallet?.balance ?? 0)}`
+              }))}
+            />
+            <SearchSection
+              title="Groups"
+              emptyMessage="No groups matched."
+              items={searchResults.groups.map((group) => ({
+                id: group.id,
+                title: group.name,
+                detail: `${group.slug} • ${group._count.members} member(s) • Owner ${group.owner.name ?? group.owner.email ?? "Unknown"}`
+              }))}
+            />
+            <SearchSection
+              title="Matches"
+              emptyMessage="No matches matched."
+              items={searchResults.matches.map((match) => ({
+                id: match.id,
+                title: `${match.homeTeam} vs ${match.awayTeam}`,
+                detail: `${match.status} • ${match._count.markets} market(s) • Starts ${formatUtcDateTime(match.startsAt)}`
+              }))}
+            />
+            <SearchSection
+              title="Markets"
+              emptyMessage="No markets matched."
+              items={searchResults.markets.map((market) => ({
+                id: market.id,
+                title: market.title,
+                detail: `${market.match.homeTeam} vs ${market.match.awayTeam} • ${market.status} • ${market._count.stakes} stake(s) • Closes ${formatUtcDateTime(market.closesAt)}`
+              }))}
+            />
+          </div>
+        </Card>
+      ) : null}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <Card className="rounded-[32px] p-6 lg:col-span-2">
@@ -222,6 +307,11 @@ export default async function AdminPage({
                   {match.status}
                 </span>
               </div>
+              {renderMatchStatusDetail(match.status) ? (
+                <p className="mt-3 text-sm text-[var(--muted)]">
+                  {renderMatchStatusDetail(match.status)}
+                </p>
+              ) : null}
               <UpdateMatchForm
                 match={{
                   id: match.id,
@@ -388,5 +478,40 @@ export default async function AdminPage({
         />
       </Card>
     </main>
+  );
+}
+
+function SearchSection({
+  title,
+  emptyMessage,
+  items
+}: {
+  title: string;
+  emptyMessage: string;
+  items: Array<{
+    id: string;
+    title: string;
+    detail: string;
+  }>;
+}) {
+  return (
+    <div className="rounded-[28px] border border-[var(--line)] bg-[var(--surface-soft)] p-5">
+      <p className="text-sm uppercase tracking-[0.18em] text-[var(--muted)]">{title}</p>
+      <div className="mt-4 space-y-3">
+        {items.length === 0 ? (
+          <p className="text-sm text-[var(--muted)]">{emptyMessage}</p>
+        ) : (
+          items.map((item) => (
+            <div
+              key={item.id}
+              className="rounded-[20px] border border-[var(--line)] bg-[var(--surface-strong)] p-4"
+            >
+              <p className="font-medium">{item.title}</p>
+              <p className="mt-2 text-sm text-[var(--muted)]">{item.detail}</p>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }

@@ -44,7 +44,7 @@ type UpdateMatchInput = AdminIdentity & {
   homeTeam: string;
   awayTeam: string;
   startsAt: string;
-  status: "SCHEDULED" | "LIVE" | "COMPLETED" | "CANCELLED";
+  status: "SCHEDULED" | "LIVE" | "COMPLETED" | "CANCELLED" | "ARCHIVED";
 };
 
 type ManualTopUpInput = AdminIdentity & {
@@ -359,6 +359,12 @@ export async function updateMatch(rawInput: UpdateMatchInput) {
     if (invalidMarket) {
       throw new Error(
         `Match start cannot move before the close time of ${invalidMarket.title}.`
+      );
+    }
+
+    if (input.status === "ARCHIVED" && match.markets.length > 0) {
+      throw new Error(
+        "Archive is only allowed after all linked markets are finalized or removed."
       );
     }
 
