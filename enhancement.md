@@ -36,3 +36,19 @@
 - Added recent stake visibility on the dashboard for settled and voided markets.
 - Added refund messaging for voided user stakes on the dashboard.
 - Added market-page messaging for voided and finalized markets so the staking UI does not appear misleadingly active.
+
+## Pagination and Navigation
+
+- Added reusable pagination controls for server-rendered pages.
+- Added pagination to dashboard wallet activity, recent stakes, and leaderboard snapshot.
+- Added pagination to admin pending markets, match management, recovery requests, recent settlements, and recent top-ups.
+- Fixed authenticated navigation on the home page so logged-in users and admins can return to dashboard/admin after clicking the logo or Home.
+
+## Cache and Performance
+
+- Added shared cache tags for homepage, admin, market, and dashboard invalidation paths.
+- Switched homepage cached reads to explicit tag-based invalidation support.
+- Updated stake placement and admin mutations to invalidate targeted cache tags in addition to route paths.
+- Added a short-lived cached admin overview data bundle to reduce repeat admin-page latency on back-and-forth navigation.
+- Added a short-lived cached dashboard data bundle scoped per user to reduce repeat dashboard load time.
+- Split market detail loading into cached public market data plus a smaller user-specific lookup to reduce repeat market-page latency.

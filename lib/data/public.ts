@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { cacheTags } from "@/lib/cache-tags";
 import { prisma } from "@/lib/prisma";
 
 export type HomepageOutcome = {
@@ -115,6 +116,6 @@ export const getHomepageData = unstable_cache(
       totalStaked: totalStaked._sum.totalStaked ?? 0
     };
   },
-  ["homepage-data"],
-  { revalidate: 30 }
+  [cacheTags.homepage],
+  { revalidate: 30, tags: [cacheTags.homepage] }
 );

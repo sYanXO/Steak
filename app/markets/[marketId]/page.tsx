@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { StakeForm } from "@/components/markets/stake-form";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { getMarketPublicDataCached } from "@/lib/data/market";
 import { formatCoins, formatOdds, formatUtcDateTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
@@ -17,38 +18,7 @@ export default async function MarketDetailPage({
   const { marketId } = await params;
   const session = await auth();
   const [market, viewer] = await Promise.all([
-    prisma.market.findUnique({
-      where: { id: marketId },
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        closesAt: true,
-        match: {
-          select: {
-            homeTeam: true,
-            awayTeam: true,
-            startsAt: true
-          }
-        },
-        outcomes: {
-          orderBy: { order: "asc" },
-          select: {
-            id: true,
-            label: true,
-            currentOdds: true,
-            totalStaked: true
-          }
-        },
-        _count: {
-          select: {
-            stakes: {
-              where: { result: "PENDING" }
-            }
-          }
-        }
-      }
-    }),
+    getMarketPublicDataCached(marketId),
     session?.user?.id
       ? prisma.user.findUnique({
           where: { id: session.user.id },

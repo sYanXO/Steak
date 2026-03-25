@@ -8,10 +8,14 @@ import { RecoveryRequestForm } from "@/components/admin/recovery-request-form";
 import { SettleMarketForm } from "@/components/admin/settle-market-form";
 import { UpdateMatchForm } from "@/components/admin/update-match-form";
 import { Card } from "@/components/ui/card";
-import { prisma } from "@/lib/prisma";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { getAdminPageData } from "@/lib/data/admin";
 import { formatCoins, formatUtcDateTime } from "@/lib/format";
+import { parsePageParam } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
+
+const ADMIN_SECTION_PAGE_SIZE = 5;
 
 function toDateTimeLocalValue(date: Date) {
   const offsetMillis = (5 * 60 + 30) * 60 * 1000;
@@ -20,33 +24,18 @@ function toDateTimeLocalValue(date: Date) {
   return shifted.toISOString().slice(0, 16);
 }
 
-async function getOpenRecoveryRequests() {
-  try {
-    return await prisma.accountRecoveryRequest.findMany({
-      where: { status: "OPEN" },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        currentEmail: true,
-        requestedEmail: true,
-        reason: true,
-        createdAt: true,
-        user: {
-          select: {
-            name: true,
-            email: true
-          }
-        }
-      }
-    });
-  } catch {
-    return [];
-  }
-}
-
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await auth();
+  const params = await searchParams;
+  const pendingPage = parsePageParam(params.pendingPage);
+  const matchesPage = parsePageParam(params.matchesPage);
+  const recoveryPage = parsePageParam(params.recoveryPage);
+  const settlementsPage = parsePageParam(params.settlementsPage);
+  const topUpsPage = parsePageParam(params.topUpsPage);
 
   if (!session?.user) {
     redirect("/sign-in");
@@ -58,105 +47,28 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  const [pendingMarkets, upcomingMatches, users, recentSettlements, recentTopUps, recoveryRequests, userCount, totalLedgerVolume] = await Promise.all([
-    prisma.market.findMany({
-      where: {
-        OR: [{ status: "DRAFT" }, { status: "OPEN" }, { status: "CLOSED" }]
-      },
-      orderBy: [{ closesAt: "asc" }],
-      take: 5,
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        closesAt: true,
-        match: {
-          select: {
-            homeTeam: true,
-            awayTeam: true
-          }
-        },
-        outcomes: {
-          orderBy: { order: "asc" },
-          select: {
-            id: true,
-            label: true
-          }
-        },
-        _count: {
-          select: { stakes: true }
-        }
-      }
-    }),
-    prisma.match.findMany({
-      orderBy: [{ startsAt: "asc" }],
-      take: 8,
-      select: {
-        id: true,
-        title: true,
-        homeTeam: true,
-        awayTeam: true,
-        startsAt: true,
-        status: true,
-        _count: {
-          select: {
-            markets: true
-          }
-        }
-      }
-    }),
-    prisma.user.findMany({
-      orderBy: [{ createdAt: "asc" }],
-      take: 20,
-      select: {
-        id: true,
-        name: true,
-        email: true
-      }
-    }),
-    prisma.adminActionLog.findMany({
-      where: {
-        actionType: "MARKET_SETTLED"
-      },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        reason: true,
-        createdAt: true,
-        admin: {
-          select: { email: true, name: true }
-        }
-      }
-    }),
-    prisma.ledgerEntry.findMany({
-      where: {
-        type: "ADMIN_TOP_UP"
-      },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        reason: true,
-        amountDelta: true,
-        createdAt: true,
-        wallet: {
-          select: {
-            user: {
-              select: { email: true, name: true }
-            }
-          }
-        }
-      }
-    }),
-    getOpenRecoveryRequests(),
-    prisma.user.count(),
-    prisma.ledgerEntry.aggregate({
-      _sum: {
-        amountDelta: true
-      }
-    })
-  ]);
+  const {
+    pendingMarkets,
+    pendingMarketsCount,
+    upcomingMatches,
+    upcomingMatchesCount,
+    users,
+    recentSettlements,
+    recentSettlementsCount,
+    recentTopUps,
+    recentTopUpsCount,
+    recoveryRequests,
+    recoveryRequestCount,
+    userCount,
+    totalLedgerVolume
+  } = await getAdminPageData({
+    pendingPage,
+    matchesPage,
+    recoveryPage,
+    settlementsPage,
+    topUpsPage,
+    pageSize: ADMIN_SECTION_PAGE_SIZE
+  });
 
   return (
     <main className="app-shell py-8">
@@ -228,6 +140,14 @@ export default async function AdminPage() {
               </div>
             ))}
           </div>
+          <PaginationControls
+            pathname="/admin"
+            page={pendingPage}
+            pageParam="pendingPage"
+            pageSize={ADMIN_SECTION_PAGE_SIZE}
+            searchParams={params}
+            totalCount={pendingMarketsCount}
+          />
         </Card>
 
         <Card className="rounded-[32px] p-6">
@@ -315,6 +235,14 @@ export default async function AdminPage() {
             </div>
           ))}
         </div>
+        <PaginationControls
+          pathname="/admin"
+          page={matchesPage}
+          pageParam="matchesPage"
+          pageSize={ADMIN_SECTION_PAGE_SIZE}
+          searchParams={params}
+          totalCount={upcomingMatchesCount}
+        />
       </Card>
 
       <Card className="mt-6 rounded-[32px] p-6 md:p-8">
@@ -369,6 +297,14 @@ export default async function AdminPage() {
             ))
           )}
         </div>
+        <PaginationControls
+          pathname="/admin"
+          page={recoveryPage}
+          pageParam="recoveryPage"
+          pageSize={ADMIN_SECTION_PAGE_SIZE}
+          searchParams={params}
+          totalCount={recoveryRequestCount}
+        />
       </Card>
 
       <Card className="mt-6 rounded-[32px] p-6 md:p-8">
@@ -397,6 +333,14 @@ export default async function AdminPage() {
             ))
           )}
         </div>
+        <PaginationControls
+          pathname="/admin"
+          page={settlementsPage}
+          pageParam="settlementsPage"
+          pageSize={ADMIN_SECTION_PAGE_SIZE}
+          searchParams={params}
+          totalCount={recentSettlementsCount}
+        />
       </Card>
 
       <Card className="mt-6 rounded-[32px] p-6 md:p-8">
@@ -434,6 +378,14 @@ export default async function AdminPage() {
             ))
           )}
         </div>
+        <PaginationControls
+          pathname="/admin"
+          page={topUpsPage}
+          pageParam="topUpsPage"
+          pageSize={ADMIN_SECTION_PAGE_SIZE}
+          searchParams={params}
+          totalCount={recentTopUpsCount}
+        />
       </Card>
     </main>
   );

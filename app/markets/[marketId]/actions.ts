@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { auth } from "@/auth";
+import { cacheTags } from "@/lib/cache-tags";
 import { placeStake } from "@/lib/services/place-stake";
 
 export type PlaceStakeActionState = {
@@ -31,6 +32,9 @@ export async function placeStakeAction(
     revalidatePath("/");
     revalidatePath("/dashboard");
     revalidatePath(`/markets/${marketId}`);
+    revalidateTag(cacheTags.homepage);
+    revalidateTag(cacheTags.market(marketId));
+    revalidateTag(cacheTags.dashboard(session.user.id));
 
     return {
       success: `Stake placed at ${result.quotedOdds.toFixed(2)}x odds.`

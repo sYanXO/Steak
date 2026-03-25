@@ -3,114 +3,55 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { prisma } from "@/lib/prisma";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { getDashboardPageDataCached } from "@/lib/data/dashboard";
 import { formatCoins, formatOdds, formatRelativeDelta, formatUtcDateTime } from "@/lib/format";
+import { parsePageParam } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+const WALLET_PAGE_SIZE = 5;
+const STAKES_PAGE_SIZE = 5;
+const LEADERBOARD_PAGE_SIZE = 10;
+
+export default async function DashboardPage({
+  searchParams
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await auth();
+  const params = await searchParams;
+  const walletPage = parsePageParam(params.walletPage);
+  const stakesPage = parsePageParam(params.stakesPage);
+  const leaderboardPage = parsePageParam(params.leaderboardPage);
 
   if (!session?.user?.email) {
     redirect("/sign-in");
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      wallet: {
-        select: {
-          balance: true,
-          entries: {
-            orderBy: { createdAt: "desc" },
-            take: 5,
-            select: {
-              id: true,
-              type: true,
-              reason: true,
-              amountDelta: true,
-              createdAt: true
-            }
-          }
-        }
-      },
-      stakes: {
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        select: {
-          id: true,
-          amount: true,
-          quotedOdds: true,
-          result: true,
-          payoutAmount: true,
-          settledAt: true,
-          market: {
-            select: {
-              title: true
-            }
-          },
-          outcome: {
-            select: {
-              label: true
-            }
-          }
-        }
-      },
-      leaderboard: {
-        where: { scope: "GLOBAL" },
-        take: 1,
-        select: { rank: true }
-      },
-      memberships: {
-        select: {
-          group: {
-            select: {
-              id: true,
-              slug: true,
-              name: true,
-              leaderboard: {
-                where: { scope: "GROUP" },
-                orderBy: { rank: "asc" },
-                take: 3,
-                select: {
-                  userId: true,
-                  rank: true
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+  const dashboardData = await getDashboardPageDataCached({
+    userId: session.user.id,
+    walletPage,
+    stakesPage,
+    leaderboardPage,
+    walletPageSize: WALLET_PAGE_SIZE,
+    stakesPageSize: STAKES_PAGE_SIZE,
+    leaderboardPageSize: LEADERBOARD_PAGE_SIZE
   });
 
-  if (!user?.wallet) {
+  if (!dashboardData?.user?.wallet) {
     redirect("/sign-in");
   }
 
-  const [pendingStakeCount, leaderboardEntries] = await Promise.all([
-    prisma.stake.count({
-      where: {
-        userId: user.id,
-        result: "PENDING"
-      }
-    }),
-    prisma.leaderboardEntry.findMany({
-      where: { scope: "GLOBAL" },
-      orderBy: [{ rank: "asc" }, { createdAt: "asc" }],
-      take: 10,
-      select: {
-        rank: true,
-        balance: true,
-        user: {
-          select: { id: true, name: true, email: true }
-        }
-      }
-    })
-  ]);
+  const {
+    user,
+    pendingStakeCount,
+    totalStakeCount,
+    totalWalletEntryCount,
+    leaderboardEntries,
+    totalLeaderboardCount
+  } = dashboardData;
+  const wallet = user.wallet!;
   const userRank = user.leaderboard[0]?.rank ?? null;
 
   return (
@@ -136,7 +77,7 @@ export default async function DashboardPage() {
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             <Stat
               title="Balance"
-              value={formatCoins(user.wallet.balance)}
+              value={formatCoins(wallet.balance)}
               detail="Coins available"
             />
             <Stat
@@ -156,8 +97,8 @@ export default async function DashboardPage() {
           <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
             Wallet activity
           </p>
-          <div className="mt-4 space-y-3">
-            {user.wallet.entries.map((entry) => (
+        <div className="mt-4 space-y-3">
+          {wallet.entries.map((entry) => (
               <div
                 key={entry.id}
                 className="rounded-[20px] border border-[var(--line)] bg-[var(--surface-soft)] px-4 py-3"
@@ -174,6 +115,14 @@ export default async function DashboardPage() {
               </div>
             ))}
           </div>
+          <PaginationControls
+            pathname="/dashboard"
+            page={walletPage}
+            pageParam="walletPage"
+            pageSize={WALLET_PAGE_SIZE}
+            searchParams={params}
+            totalCount={totalWalletEntryCount}
+          />
         </Card>
       </div>
 
@@ -222,6 +171,14 @@ export default async function DashboardPage() {
             ))
           )}
         </div>
+        <PaginationControls
+          pathname="/dashboard"
+          page={stakesPage}
+          pageParam="stakesPage"
+          pageSize={STAKES_PAGE_SIZE}
+          searchParams={params}
+          totalCount={totalStakeCount}
+        />
       </Card>
 
       <Card className="mt-6 rounded-[32px] p-6 md:p-8">
@@ -293,6 +250,14 @@ export default async function DashboardPage() {
             </tbody>
           </table>
         </div>
+        <PaginationControls
+          pathname="/dashboard"
+          page={leaderboardPage}
+          pageParam="leaderboardPage"
+          pageSize={LEADERBOARD_PAGE_SIZE}
+          searchParams={params}
+          totalCount={totalLeaderboardCount}
+        />
       </Card>
     </main>
   );

@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { ZodError } from "zod";
 import { auth } from "@/auth";
+import { cacheTags } from "@/lib/cache-tags";
 import {
   createMarket,
   createMatch,
@@ -100,6 +101,9 @@ export async function settleMarketAction(
     revalidatePath("/dashboard");
     revalidatePath("/admin");
     revalidatePath(`/markets/${marketId}`);
+    revalidateTag(cacheTags.homepage);
+    revalidateTag(cacheTags.market(marketId));
+    revalidateTag(cacheTags.admin);
 
     return {
       success: `Settled ${result.settledStakeCount} stake(s) for ${result.settledOutcome}.`
@@ -130,6 +134,8 @@ export async function createMatchAction(
 
     revalidatePath("/");
     revalidatePath("/admin");
+    revalidateTag(cacheTags.homepage);
+    revalidateTag(cacheTags.admin);
 
     return {
       success: `Created match ${match.homeTeam} vs ${match.awayTeam}.`
@@ -163,6 +169,9 @@ export async function createMarketAction(
     revalidatePath("/");
     revalidatePath("/admin");
     revalidatePath(`/markets/${market.id}`);
+    revalidateTag(cacheTags.homepage);
+    revalidateTag(cacheTags.market(market.id));
+    revalidateTag(cacheTags.admin);
 
     return {
       success: `Created market ${market.title}.`
@@ -200,6 +209,8 @@ export async function updateMatchAction(
 
     revalidatePath("/");
     revalidatePath("/admin");
+    revalidateTag(cacheTags.homepage);
+    revalidateTag(cacheTags.admin);
 
     return {
       success: `Updated match ${match.homeTeam} vs ${match.awayTeam}.`
@@ -230,6 +241,9 @@ export async function updateMarketStatusAction(
     revalidatePath("/");
     revalidatePath("/admin");
     revalidatePath(`/markets/${market.id}`);
+    revalidateTag(cacheTags.homepage);
+    revalidateTag(cacheTags.market(market.id));
+    revalidateTag(cacheTags.admin);
 
     return {
       success:
@@ -263,6 +277,8 @@ export async function manualTopUpAction(
 
     revalidatePath("/dashboard");
     revalidatePath("/admin");
+    revalidateTag(cacheTags.admin);
+    revalidateTag(cacheTags.dashboard(result.userId));
 
     return {
       success: `Added ${result.amount} coins to ${result.userLabel}.`
@@ -293,6 +309,8 @@ export async function resolveRecoveryRequestAction(
     revalidatePath("/admin");
     revalidatePath("/profile");
     revalidatePath("/dashboard");
+    revalidateTag(cacheTags.admin);
+    revalidateTag(cacheTags.dashboard(user.id));
 
     return {
       success: `Recovery request resolved for ${user.email}.`
