@@ -34,7 +34,8 @@ test("cron cricketdata sync route runs sync only by default", async () => {
     syncCricketDataMatches: async () => ({
       syncedMatchCount: 25,
       createdMatchCount: 1,
-      updatedMatchCount: 24
+      updatedMatchCount: 24,
+      prunedMatchCount: 2
     }),
     runMarketAutomation: async () => {
       automationCalls += 1;
@@ -93,7 +94,8 @@ test("cron cricketdata sync route can include automation explicitly", async () =
     syncCricketDataMatches: async () => ({
       syncedMatchCount: 10,
       createdMatchCount: 0,
-      updatedMatchCount: 10
+      updatedMatchCount: 10,
+      prunedMatchCount: 1
     }),
     runMarketAutomation: async () => {
       automationCalls += 1;

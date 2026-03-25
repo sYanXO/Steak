@@ -6,6 +6,7 @@ type SyncSummary = {
   syncedMatchCount: number;
   createdMatchCount: number;
   updatedMatchCount: number;
+  prunedMatchCount: number;
 };
 
 export async function syncCricketDataMatches(apiKey: string): Promise<SyncSummary> {
@@ -31,6 +32,25 @@ export async function syncCricketDataMatches(apiKey: string): Promise<SyncSummar
   );
   let createdMatchCount = 0;
   let updatedMatchCount = 0;
+
+  const staleProviderMatches = await prisma.match.findMany({
+    where: {
+      provider: "CRICKETDATA",
+      providerMatchId: {
+        notIn: providerMatchIds.length > 0 ? providerMatchIds : [""]
+      },
+      markets: {
+        none: {
+          stakes: {
+            some: {}
+          }
+        }
+      }
+    },
+    select: {
+      id: true
+    }
+  });
 
   for (const match of matches) {
     const where: Prisma.MatchWhereUniqueInput = {
@@ -76,9 +96,22 @@ export async function syncCricketDataMatches(apiKey: string): Promise<SyncSummar
     });
   }
 
+  const staleMatchIds = staleProviderMatches.map((match) => match.id);
+
+  if (staleMatchIds.length > 0) {
+    await prisma.match.deleteMany({
+      where: {
+        id: {
+          in: staleMatchIds
+        }
+      }
+    });
+  }
+
   return {
     syncedMatchCount: matches.length,
     createdMatchCount,
-    updatedMatchCount
+    updatedMatchCount,
+    prunedMatchCount: staleMatchIds.length
   };
 }

@@ -134,16 +134,7 @@ function toProviderMatch(match: CricketDataMatch): ProviderMatchRecord | null {
 }
 
 function isIplMatch(match: CricketDataMatch) {
-  const searchBlob = [
-    match.name,
-    match.series,
-    match.seriesName,
-    match.tournament,
-    match.competition
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+  const searchBlob = (match.name ?? "").toLowerCase();
 
   return IPL_KEYWORDS.some((keyword) => searchBlob.includes(keyword));
 }

@@ -7,6 +7,7 @@ type SyncSummary = {
   syncedMatchCount: number;
   createdMatchCount: number;
   updatedMatchCount: number;
+  prunedMatchCount: number;
 };
 
 type AutomationSummary = {
@@ -67,6 +68,7 @@ export function createCronCricketdataSyncRoute(deps: Deps) {
         syncedMatchCount: syncSummary.syncedMatchCount,
         createdMatchCount: syncSummary.createdMatchCount,
         updatedMatchCount: syncSummary.updatedMatchCount,
+        prunedMatchCount: syncSummary.prunedMatchCount,
         automationIncluded: includeAutomation,
         autoCreatedMarketCount: automationSummary?.createdMarketCount ?? 0,
         autoSettledMarketCount: automationSummary?.settledMarketCount ?? 0

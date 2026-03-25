@@ -7,8 +7,10 @@ test("syncCricketDataMatches upserts provider-owned matches and reports create v
   const originalFetch = global.fetch;
   const originalMatchFindMany = prisma.match.findMany;
   const originalMatchUpsert = prisma.match.upsert;
+  const originalMatchDeleteMany = prisma.match.deleteMany;
 
   const upserts: Array<Record<string, unknown>> = [];
+  const deletedIds: string[][] = [];
 
   global.fetch = (async () =>
     ({
@@ -38,15 +40,41 @@ test("syncCricketDataMatches upserts provider-owned matches and reports create v
       }
     }) as Response) as typeof fetch;
 
-  prisma.match.findMany = ((async ({ where }: { where?: { providerMatchId?: { in?: string[] } } }) =>
-    (where?.providerMatchId?.in ?? []).includes("provider-match-1")
-      ? [{ providerMatchId: "provider-match-1" }]
-      : []) as unknown) as typeof prisma.match.findMany;
+  prisma.match.findMany = ((async ({
+    where
+  }: {
+    where?: {
+      providerMatchId?: { in?: string[] };
+      provider?: string;
+      stakes?: { none?: Record<string, never> };
+    };
+  }) => {
+    if (where?.providerMatchId?.in) {
+      return (where.providerMatchId.in ?? []).includes("provider-match-1")
+        ? [{ providerMatchId: "provider-match-1" }]
+        : [];
+    }
+
+    if (where?.provider === "CRICKETDATA") {
+      return [{ id: "stale-provider-match" }];
+    }
+
+    return [];
+  }) as unknown) as typeof prisma.match.findMany;
 
   prisma.match.upsert = ((async ({ create, update, where }: Record<string, unknown>) => {
     upserts.push({ create, update, where });
     return {} as never;
   }) as unknown) as typeof prisma.match.upsert;
+
+  prisma.match.deleteMany = ((async ({
+    where
+  }: {
+    where?: { id?: { in?: string[] } };
+  }) => {
+    deletedIds.push(where?.id?.in ?? []);
+    return { count: where?.id?.in?.length ?? 0 } as never;
+  }) as unknown) as typeof prisma.match.deleteMany;
 
   try {
     const summary = await syncCricketDataMatches("api-key");
@@ -54,9 +82,11 @@ test("syncCricketDataMatches upserts provider-owned matches and reports create v
     assert.deepEqual(summary, {
       syncedMatchCount: 2,
       createdMatchCount: 1,
-      updatedMatchCount: 1
+      updatedMatchCount: 1,
+      prunedMatchCount: 1
     });
     assert.equal(upserts.length, 2);
+    assert.deepEqual(deletedIds, [["stale-provider-match"]]);
     assert.equal(
       (upserts[0]?.where as { providerMatchId?: string }).providerMatchId,
       "provider-match-1"
@@ -73,5 +103,6 @@ test("syncCricketDataMatches upserts provider-owned matches and reports create v
     global.fetch = originalFetch;
     prisma.match.findMany = originalMatchFindMany;
     prisma.match.upsert = originalMatchUpsert;
+    prisma.match.deleteMany = originalMatchDeleteMany;
   }
 });

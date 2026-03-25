@@ -21,6 +21,7 @@ type SyncSummary = {
   syncedMatchCount: number;
   createdMatchCount: number;
   updatedMatchCount: number;
+  prunedMatchCount: number;
 };
 
 type AutomationSummary = {
@@ -93,11 +94,12 @@ export function createRunProviderSyncAction(
         adminId: adminUser.id,
         syncedMatchCount: summary.syncedMatchCount,
         createdMatchCount: summary.createdMatchCount,
-        updatedMatchCount: summary.updatedMatchCount
+        updatedMatchCount: summary.updatedMatchCount,
+        prunedMatchCount: summary.prunedMatchCount
       });
 
       return {
-        success: `Synced ${summary.syncedMatchCount} provider match(es).`
+        success: `Synced ${summary.syncedMatchCount} provider match(es) and pruned ${summary.prunedMatchCount} stale match(es).`
       };
     } catch (error) {
       deps.logActionError("admin.run-provider-sync", error, {

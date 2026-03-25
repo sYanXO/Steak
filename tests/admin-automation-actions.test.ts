@@ -40,7 +40,8 @@ test("createRunProviderSyncAction returns a success message for admins", async (
     syncCricketDataMatches: async () => ({
       syncedMatchCount: 25,
       createdMatchCount: 0,
-      updatedMatchCount: 25
+      updatedMatchCount: 25,
+      prunedMatchCount: 3
     }),
     revalidatePath(path) {
       revalidatedPaths.push(path);
@@ -55,7 +56,9 @@ test("createRunProviderSyncAction returns a success message for admins", async (
 
   const result = await action({});
 
-  assert.deepEqual(result, { success: "Synced 25 provider match(es)." });
+  assert.deepEqual(result, {
+    success: "Synced 25 provider match(es) and pruned 3 stale match(es)."
+  });
   assert.deepEqual(revalidatedPaths, ["/", "/admin"]);
   assert.deepEqual(revalidatedTags, ["homepage-data", "admin:overview"]);
 });
