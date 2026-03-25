@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 type SnapshotInput = {
   marketId: string;
@@ -8,7 +9,7 @@ type SnapshotInput = {
 };
 
 export async function recordMarketOutcomeSnapshots(
-  tx: Prisma.TransactionClient,
+  db: Prisma.TransactionClient | typeof prisma,
   outcomes: SnapshotInput[],
   recordedAt = new Date()
 ) {
@@ -16,7 +17,7 @@ export async function recordMarketOutcomeSnapshots(
     return;
   }
 
-  await tx.outcomeOddsSnapshot.createMany({
+  await db.outcomeOddsSnapshot.createMany({
     data: outcomes.map((outcome) => ({
       marketId: outcome.marketId,
       outcomeId: outcome.outcomeId,

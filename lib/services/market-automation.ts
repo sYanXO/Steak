@@ -55,8 +55,10 @@ function getAutoSettlementLabel(match: {
   return null;
 }
 
+type AutomationDbClient = Prisma.TransactionClient | typeof prisma;
+
 async function createAutomatedMarket(
-  tx: Prisma.TransactionClient,
+  db: AutomationDbClient,
   input: {
     matchId: string;
     homeTeam: string;
@@ -73,7 +75,7 @@ async function createAutomatedMarket(
   const seededOdds = new Prisma.Decimal("2.0000");
   const status = computeMarketStatus(input.now, opensAt, input.closesAt);
 
-  const market = await tx.market.create({
+  const market = await db.market.create({
     data: {
       matchId: input.matchId,
       title: input.title,
@@ -104,7 +106,7 @@ async function createAutomatedMarket(
   });
 
   if (input.adminId) {
-    await tx.adminActionLog.create({
+    await db.adminActionLog.create({
       data: {
         adminId: input.adminId,
         actionType: "MARKET_CREATED",
@@ -121,7 +123,7 @@ async function createAutomatedMarket(
   }
 
   await recordMarketOutcomeSnapshots(
-    tx,
+    db as Prisma.TransactionClient,
     market.outcomes.map((outcome) => ({
       marketId: market.id,
       outcomeId: outcome.id,
@@ -144,70 +146,66 @@ export async function runMarketAutomation(now = new Date()): Promise<AutomationS
 
   const adminId = getAutomationAdminId(admins);
 
-  const createdMarketIds = await prisma.$transaction(async (tx) => {
-    const matches = await tx.match.findMany({
-      where: {
-        status: {
-          in: ["SCHEDULED", "LIVE"]
-        }
-      },
-      include: {
-        markets: {
-          select: {
-            automationKey: true
-          }
-        }
+  const matches = await prisma.match.findMany({
+    where: {
+      status: {
+        in: ["SCHEDULED", "LIVE"]
       }
-    });
-
-    const createdIds: string[] = [];
-
-    for (const match of matches) {
-      const existingKeys = new Set(
-        match.markets
-          .map((market) => market.automationKey)
-          .filter((value): value is string => Boolean(value))
-      );
-
-      if (!existingKeys.has(MATCH_WINNER_KEY)) {
-        createdIds.push(
-          await createAutomatedMarket(tx, {
-            matchId: match.id,
-            homeTeam: match.homeTeam,
-            awayTeam: match.awayTeam,
-            startsAt: match.startsAt,
-            adminId,
-            automationKey: MATCH_WINNER_KEY,
-            title: MATCH_WINNER_TITLE,
-            closesAt: match.startsAt,
-            now
-          })
-        );
-      }
-
-      if (!existingKeys.has(TOSS_WINNER_KEY)) {
-        const tossCloseAt = new Date(
-          match.startsAt.getTime() - DEFAULT_TOSS_CLOSE_LEAD_MINUTES * 60 * 1000
-        );
-
-        createdIds.push(
-          await createAutomatedMarket(tx, {
-            matchId: match.id,
-            homeTeam: match.homeTeam,
-            awayTeam: match.awayTeam,
-            startsAt: match.startsAt,
-            adminId,
-            automationKey: TOSS_WINNER_KEY,
-            title: TOSS_WINNER_TITLE,
-            closesAt: tossCloseAt,
-            now
-          })
-        );
+    },
+    include: {
+      markets: {
+        select: {
+          automationKey: true
+        }
       }
     }
-
-    return createdIds;
   });
+
+  const createdMarketIds: string[] = [];
+
+  for (const match of matches) {
+    const existingKeys = new Set(
+      match.markets
+        .map((market) => market.automationKey)
+        .filter((value): value is string => Boolean(value))
+    );
+
+    if (!existingKeys.has(MATCH_WINNER_KEY)) {
+      createdMarketIds.push(
+        await createAutomatedMarket(prisma, {
+          matchId: match.id,
+          homeTeam: match.homeTeam,
+          awayTeam: match.awayTeam,
+          startsAt: match.startsAt,
+          adminId,
+          automationKey: MATCH_WINNER_KEY,
+          title: MATCH_WINNER_TITLE,
+          closesAt: match.startsAt,
+          now
+        })
+      );
+    }
+
+    if (!existingKeys.has(TOSS_WINNER_KEY)) {
+      const tossCloseAt = new Date(
+        match.startsAt.getTime() - DEFAULT_TOSS_CLOSE_LEAD_MINUTES * 60 * 1000
+      );
+
+      createdMarketIds.push(
+        await createAutomatedMarket(prisma, {
+          matchId: match.id,
+          homeTeam: match.homeTeam,
+          awayTeam: match.awayTeam,
+          startsAt: match.startsAt,
+          adminId,
+          automationKey: TOSS_WINNER_KEY,
+          title: TOSS_WINNER_TITLE,
+          closesAt: tossCloseAt,
+          now
+        })
+      );
+    }
+  }
 
   const liveMatches = await prisma.match.updateMany({
     where: {
