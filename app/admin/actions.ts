@@ -91,7 +91,7 @@ function getRequestId(formData: FormData) {
   return actionRequestIdSchema.parse(String(formData.get("requestId") ?? ""));
 }
 
-export const settleMarketAction = createSettleMarketAction({
+const settleMarketActionImpl = createSettleMarketAction({
   auth,
   settleMarket,
   revalidatePath,
@@ -101,6 +101,12 @@ export const settleMarketAction = createSettleMarketAction({
   logActionSuccess,
   logActionError
 });
+
+export async function settleMarketAction(
+  ...args: Parameters<typeof settleMarketActionImpl>
+): Promise<Awaited<ReturnType<typeof settleMarketActionImpl>>> {
+  return settleMarketActionImpl(...args);
+}
 
 export async function createMatchAction(
   _prevState: AdminCreateActionState,
@@ -292,7 +298,7 @@ export async function updateMarketStatusAction(
   }
 }
 
-export const runProviderSyncAction = createRunProviderSyncAction({
+const runProviderSyncActionImpl = createRunProviderSyncAction({
   auth,
   getApiKey: () => process.env.CRICKETDATA_API_KEY,
   syncCricketDataMatches,
@@ -303,7 +309,13 @@ export const runProviderSyncAction = createRunProviderSyncAction({
   logActionError
 });
 
-export const runMarketAutomationAction = createRunMarketAutomationAction({
+export async function runProviderSyncAction(
+  ...args: Parameters<typeof runProviderSyncActionImpl>
+): Promise<Awaited<ReturnType<typeof runProviderSyncActionImpl>>> {
+  return runProviderSyncActionImpl(...args);
+}
+
+const runMarketAutomationActionImpl = createRunMarketAutomationAction({
   auth,
   runMarketAutomation,
   revalidatePath,
@@ -312,6 +324,12 @@ export const runMarketAutomationAction = createRunMarketAutomationAction({
   logActionSuccess,
   logActionError
 });
+
+export async function runMarketAutomationAction(
+  ...args: Parameters<typeof runMarketAutomationActionImpl>
+): Promise<Awaited<ReturnType<typeof runMarketAutomationActionImpl>>> {
+  return runMarketAutomationActionImpl(...args);
+}
 
 export async function manualTopUpAction(
   _prevState: AdminMutationActionState,
