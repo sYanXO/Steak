@@ -1,5 +1,3 @@
-import { unstable_cache } from "next/cache";
-import { cacheTags } from "@/lib/cache-tags";
 import { measureAsync } from "@/lib/observability";
 import { prisma } from "@/lib/prisma";
 
@@ -13,23 +11,22 @@ type AdminPageDataInput = {
   searchTerm: string;
 };
 
-export const getAdminPageData = unstable_cache(
-  async ({
-    pendingPage,
-    matchesPage,
-    recoveryPage,
-    settlementsPage,
-    topUpsPage,
-    pageSize,
-    searchTerm
-  }: AdminPageDataInput) => {
-    const trimmedSearchTerm = searchTerm.trim();
-    const hasSearch = trimmedSearchTerm.length > 0;
+export async function getAdminPageData({
+  pendingPage,
+  matchesPage,
+  recoveryPage,
+  settlementsPage,
+  topUpsPage,
+  pageSize,
+  searchTerm
+}: AdminPageDataInput) {
+  const trimmedSearchTerm = searchTerm.trim();
+  const hasSearch = trimmedSearchTerm.length > 0;
 
-    return measureAsync(
-      "admin.page-data",
-      async () =>
-        Promise.all([
+  return measureAsync(
+    "admin.page-data",
+    async () =>
+      Promise.all([
           prisma.market.findMany({
             where: {
               OR: [{ status: "DRAFT" }, { status: "OPEN" }, { status: "CLOSED" }]
@@ -423,65 +420,62 @@ export const getAdminPageData = unstable_cache(
                 }
               })
             : Promise.resolve([])
-        ]),
-      { pendingPage, matchesPage, recoveryPage, settlementsPage, topUpsPage, hasSearch }
-    ).then(
-      ([
-        pendingMarkets,
-        pendingMarketsCount,
-        upcomingMatches,
-        upcomingMatchesCount,
-        users,
-        recentSettlements,
-        recentSettlementsCount,
-        recentTopUps,
-        recentTopUpsCount,
-        recoveryRequests,
-        recoveryRequestCount,
-        userCount,
-        totalLedgerVolume,
+      ]),
+    { pendingPage, matchesPage, recoveryPage, settlementsPage, topUpsPage, hasSearch }
+  ).then(
+    ([
+      pendingMarkets,
+      pendingMarketsCount,
+      upcomingMatches,
+      upcomingMatchesCount,
+      users,
+      recentSettlements,
+      recentSettlementsCount,
+      recentTopUps,
+      recentTopUpsCount,
+      recoveryRequests,
+      recoveryRequestCount,
+      userCount,
+      totalLedgerVolume,
+      providerManagedMatchesCount,
+      liveProviderMatchesCount,
+      completedProviderMatchesCount,
+      automatedMarketsCount,
+      openAutomatedMarketsCount,
+      settledAutomatedMarketsCount,
+      searchUsers,
+      searchGroups,
+      searchMatches,
+      searchMarkets
+    ]) => ({
+      pendingMarkets,
+      pendingMarketsCount,
+      upcomingMatches,
+      upcomingMatchesCount,
+      users,
+      recentSettlements,
+      recentSettlementsCount,
+      recentTopUps,
+      recentTopUpsCount,
+      recoveryRequests,
+      recoveryRequestCount,
+      userCount,
+      totalLedgerVolume,
+      automationOverview: {
         providerManagedMatchesCount,
         liveProviderMatchesCount,
         completedProviderMatchesCount,
         automatedMarketsCount,
         openAutomatedMarketsCount,
-        settledAutomatedMarketsCount,
-        searchUsers,
-        searchGroups,
-        searchMatches,
-        searchMarkets
-      ]) => ({
-        pendingMarkets,
-        pendingMarketsCount,
-        upcomingMatches,
-        upcomingMatchesCount,
-        users,
-        recentSettlements,
-        recentSettlementsCount,
-        recentTopUps,
-        recentTopUpsCount,
-        recoveryRequests,
-        recoveryRequestCount,
-        userCount,
-        totalLedgerVolume,
-        automationOverview: {
-          providerManagedMatchesCount,
-          liveProviderMatchesCount,
-          completedProviderMatchesCount,
-          automatedMarketsCount,
-          openAutomatedMarketsCount,
-          settledAutomatedMarketsCount
-        },
-        searchResults: {
-          term: trimmedSearchTerm,
-          users: searchUsers,
-          groups: searchGroups,
-          matches: searchMatches,
-          markets: searchMarkets
-        }
-      })
-    );
-  },
-  ["admin-page-data"],
-  { revalidate: 15, tags: [cacheTags.admin] }
-);
+        settledAutomatedMarketsCount
+      },
+      searchResults: {
+        term: trimmedSearchTerm,
+        users: searchUsers,
+        groups: searchGroups,
+        matches: searchMatches,
+        markets: searchMarkets
+      }
+    })
+  );
+}
