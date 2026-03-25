@@ -18,7 +18,7 @@ test("syncCricketDataMatches upserts provider-owned matches and reports create v
           data: [
             {
               id: "provider-match-1",
-              name: "Mumbai Indians vs Chennai Super Kings",
+              name: "IPL 2026: Mumbai Indians vs Chennai Super Kings",
               status: "Mumbai Indians won by 7 wickets",
               dateTimeGMT: "2026-04-01T14:00:00.000Z",
               teams: ["Mumbai Indians", "Chennai Super Kings"],
@@ -28,7 +28,7 @@ test("syncCricketDataMatches upserts provider-owned matches and reports create v
             },
             {
               id: "provider-match-2",
-              name: "Royal Challengers Bengaluru vs Gujarat Titans",
+              name: "Indian Premier League: Royal Challengers Bengaluru vs Gujarat Titans",
               status: "Match not started",
               dateTimeGMT: "2026-04-02T14:00:00.000Z",
               teams: ["Royal Challengers Bengaluru", "Gujarat Titans"]

@@ -13,6 +13,11 @@ type CricketDataMatch = {
   status?: string;
   date?: string;
   dateTimeGMT?: string;
+  series?: string;
+  seriesName?: string;
+  series_id?: string;
+  tournament?: string;
+  competition?: string;
   teams?: string[];
   teamInfo?: CricketDataTeam[];
   tossWinner?: string;
@@ -25,6 +30,8 @@ type CricketDataResponse = {
   status?: string;
   data?: CricketDataMatch[];
 };
+
+const IPL_KEYWORDS = ["ipl", "indian premier league", "tata ipl"];
 
 export type ProviderMatchRecord = {
   provider: string;
@@ -126,6 +133,21 @@ function toProviderMatch(match: CricketDataMatch): ProviderMatchRecord | null {
   };
 }
 
+function isIplMatch(match: CricketDataMatch) {
+  const searchBlob = [
+    match.name,
+    match.series,
+    match.seriesName,
+    match.tournament,
+    match.competition
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return IPL_KEYWORDS.some((keyword) => searchBlob.includes(keyword));
+}
+
 async function fetchMatches(endpoint: string, apiKey: string) {
   const response = await fetch(`${CRICKETDATA_BASE_URL}/${endpoint}?apikey=${apiKey}`, {
     headers: {
@@ -140,7 +162,10 @@ async function fetchMatches(endpoint: string, apiKey: string) {
 
   const body = (await response.json()) as CricketDataResponse;
 
-  return (body.data ?? []).map(toProviderMatch).filter((match): match is ProviderMatchRecord => Boolean(match));
+  return (body.data ?? [])
+    .filter(isIplMatch)
+    .map(toProviderMatch)
+    .filter((match): match is ProviderMatchRecord => Boolean(match));
 }
 
 export async function fetchCricketDataMatches(apiKey: string) {
