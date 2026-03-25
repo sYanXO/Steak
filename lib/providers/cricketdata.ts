@@ -1,5 +1,5 @@
 const CRICKETDATA_PROVIDER = "CRICKETDATA";
-const CRICKETDATA_BASE_URL = "https://api.cricketdata.org/v1";
+const CRICKETDATA_BASE_URL = "https://api.cricapi.com/v1";
 
 type CricketDataTeam = {
   name?: string;
