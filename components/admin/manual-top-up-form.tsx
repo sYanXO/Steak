@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { manualTopUpAction, type AdminMutationActionState } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
+import { createClientRequestId } from "@/lib/client-request-id";
 
 const initialState: AdminMutationActionState = {};
 
@@ -16,12 +17,12 @@ type ManualTopUpFormProps = {
 export function ManualTopUpForm({ users }: ManualTopUpFormProps) {
   const [state, formAction, pending] = useActionState(manualTopUpAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
-  const requestIdRef = useRef(crypto.randomUUID());
+  const requestIdRef = useRef(createClientRequestId());
 
   useEffect(() => {
     if (state.success) {
       formRef.current?.reset();
-      requestIdRef.current = crypto.randomUUID();
+      requestIdRef.current = createClientRequestId();
     }
   }, [state.success]);
 

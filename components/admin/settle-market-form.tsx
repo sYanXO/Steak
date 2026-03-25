@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { settleMarketAction, type SettleMarketActionState } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
+import { createClientRequestId } from "@/lib/client-request-id";
 
 const initialState: SettleMarketActionState = {};
 
@@ -17,11 +18,11 @@ type SettleMarketFormProps = {
 export function SettleMarketForm({ marketId, outcomes }: SettleMarketFormProps) {
   const action = settleMarketAction.bind(null, marketId);
   const [state, formAction, pending] = useActionState(action, initialState);
-  const requestIdRef = useRef(crypto.randomUUID());
+  const requestIdRef = useRef(createClientRequestId());
 
   useEffect(() => {
     if (state.success) {
-      requestIdRef.current = crypto.randomUUID();
+      requestIdRef.current = createClientRequestId();
     }
   }, [state.success]);
 

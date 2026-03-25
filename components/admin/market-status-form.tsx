@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { updateMarketStatusAction, type AdminMutationActionState } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
+import { createClientRequestId } from "@/lib/client-request-id";
 
 const initialState: AdminMutationActionState = {};
 
@@ -14,14 +15,14 @@ type MarketStatusFormProps = {
 export function MarketStatusForm({ marketId, currentStatus }: MarketStatusFormProps) {
   const action = updateMarketStatusAction.bind(null, marketId);
   const [state, formAction, pending] = useActionState(action, initialState);
-  const requestIdRef = useRef(crypto.randomUUID());
+  const requestIdRef = useRef(createClientRequestId());
   const allowedStatuses = ["DRAFT", "OPEN", "CLOSED", "VOID"];
   const defaultStatus = allowedStatuses.includes(currentStatus) ? currentStatus : "CLOSED";
   const isVoidSelection = defaultStatus === "VOID";
 
   useEffect(() => {
     if (state.success) {
-      requestIdRef.current = crypto.randomUUID();
+      requestIdRef.current = createClientRequestId();
     }
   }, [state.success]);
 
