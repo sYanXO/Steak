@@ -26,6 +26,7 @@ DATABASE_URL="postgresql://..."
 DIRECT_URL="postgresql://..."
 AUTH_SECRET="replace-with-a-long-random-secret"
 CRON_SECRET="replace-with-a-long-random-secret"
+CRICKETDATA_API_KEY=""
 AUTH_GOOGLE_ID=""
 AUTH_GOOGLE_SECRET=""
 SMTP_HOST=""
@@ -40,6 +41,7 @@ Google auth is optional. If `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` are blank,
 OTP-backed self-service email/password changes require the SMTP env vars above.
 `DIRECT_URL` should point at the direct database connection for Prisma migrations.
 `CRON_SECRET` secures internal automation routes.
+`CRICKETDATA_API_KEY` is required if you want to sync free match data from CricketData/CricAPI.
 
 ## Install
 
@@ -204,6 +206,26 @@ Protect the route with `CRON_SECRET` and call it with either:
 - `x-cron-secret: <CRON_SECRET>`
 
 To make auto-settlement work, record the official toss and match result fields from the admin match-management form.
+
+## Provider sync
+
+The app also supports a CricketData-backed sync route at `/api/cron/cricketdata-sync`.
+
+Use it to:
+
+- import provider-owned fixtures into `Match`
+- refresh live and recently updated matches
+- feed toss and winner data into the existing market automation flow
+
+Required env:
+
+- `CRICKETDATA_API_KEY`
+- `CRON_SECRET`
+
+This route is protected the same way as the market automation route:
+
+- `Authorization: Bearer <CRON_SECRET>`
+- `x-cron-secret: <CRON_SECRET>`
 
 ## Current product surface
 

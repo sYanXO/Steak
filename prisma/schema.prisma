@@ -131,6 +131,8 @@ model LedgerEntry {
 
 model Match {
   id           String       @id @default(cuid())
+  provider     String?
+  providerMatchId String?   @unique
   title        String
   homeTeam     String
   awayTeam     String
@@ -140,11 +142,13 @@ model Match {
   tossDecision String?
   winnerTeam   String?
   completedAt  DateTime?
+  lastSyncedAt DateTime?
   markets      Market[]
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
   @@index([status, startsAt])
+  @@index([provider, startsAt])
 }
 
 model Market {
