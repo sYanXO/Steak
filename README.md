@@ -1,5 +1,20 @@
 # Stake IPL
 
+## Drawbacks
+
+- Free provider limitation:
+  This project currently relies on the free CricketData/CricAPI feed for automated fixture import. In practice, that feed does not reliably expose IPL fixtures with a clean tournament identifier, and at times returns no IPL matches at all.
+- Why this matters:
+  Automated match creation, market creation, timed closing, and auto-settlement all depend on upstream fixture and result data. If the provider does not return IPL matches, the automation layer has nothing valid to import.
+- What was tried:
+  The sync layer was intentionally tightened to avoid polluting the app with unrelated cricket matches. We first tried broader keyword-based filtering, then restricted the logic to strict IPL name matching only. That removed non-IPL junk, but it also exposed the core limitation of the free feed: sometimes it simply does not provide IPL fixtures.
+- Current behavior:
+  When the free provider returns no IPL fixtures, provider sync correctly imports zero matches instead of importing the wrong competitions.
+- How to overcome it:
+  Use a paid cricket data provider with reliable tournament metadata, add a second provider fallback, maintain a curated internal fixture source for IPL, or temporarily loosen the filter and accept noisier data for demo purposes.
+- Intentional tradeoff:
+  This is a pet-project constraint, not an implementation oversight. The current behavior prefers correctness over fake completeness.
+
 Stake IPL is a Next.js full-stack app for IPL prediction using fictional in-app coins only. It includes:
 
 - public sign-up and credentials auth
