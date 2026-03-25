@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:deploy": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "test": "node --import tsx --test --test-concurrency=1 tests/**/*.test.ts",
     "test:e2e": "playwright test",
