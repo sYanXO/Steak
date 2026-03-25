@@ -3,6 +3,10 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { ZodError } from "zod";
 import { auth } from "@/auth";
+import {
+  createRunMarketAutomationAction,
+  createRunProviderSyncAction
+} from "@/lib/action-factories/admin-automation";
 import { createSettleMarketAction } from "@/lib/action-factories/settle-market";
 import { cacheTags } from "@/lib/cache-tags";
 import { runIdempotent } from "@/lib/idempotency";
@@ -19,7 +23,9 @@ import {
   updateMatch,
   updateMarketStatus
 } from "@/lib/services/admin-operations";
+import { runMarketAutomation } from "@/lib/services/market-automation";
 import { resolveRecoveryRequest } from "@/lib/services/profile";
+import { syncCricketDataMatches } from "@/lib/services/provider-sync";
 import { actionRequestIdSchema } from "@/lib/validation/admin";
 import { settleMarket } from "@/lib/services/settle-market";
 
@@ -285,6 +291,27 @@ export async function updateMarketStatusAction(
     return { error: getActionErrorMessage(error, "Unable to update market status.") };
   }
 }
+
+export const runProviderSyncAction = createRunProviderSyncAction({
+  auth,
+  getApiKey: () => process.env.CRICKETDATA_API_KEY,
+  syncCricketDataMatches,
+  revalidatePath,
+  revalidateTag,
+  logActionStart,
+  logActionSuccess,
+  logActionError
+});
+
+export const runMarketAutomationAction = createRunMarketAutomationAction({
+  auth,
+  runMarketAutomation,
+  revalidatePath,
+  revalidateTag,
+  logActionStart,
+  logActionSuccess,
+  logActionError
+});
 
 export async function manualTopUpAction(
   _prevState: AdminMutationActionState,

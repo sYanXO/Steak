@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { AutomationControlPanel } from "@/components/admin/automation-control-panel";
 import { CreateMarketForm } from "@/components/admin/create-market-form";
 import { CreateMatchForm } from "@/components/admin/create-match-form";
 import { ManualTopUpForm } from "@/components/admin/manual-top-up-form";
@@ -79,6 +80,7 @@ export default async function AdminPage({
     recoveryRequestCount,
     userCount,
     totalLedgerVolume,
+    automationOverview,
     searchResults
   } = await getAdminPageData({
     pendingPage,
@@ -170,6 +172,51 @@ export default async function AdminPage({
       ) : null}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <Card className="rounded-[32px] p-6 lg:col-span-3">
+          <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
+            Automation overview
+          </p>
+          <h2 className="mt-2 text-2xl font-bold">Provider-driven operations</h2>
+          <p className="mt-3 max-w-3xl text-sm text-[var(--muted)]">
+            Match ingestion and standard toss or winner market creation now run automatically.
+            Use this console to monitor automation health, record exceptions, and fall back to
+            manual controls only when needed.
+          </p>
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <AutomationMetric
+              label="Provider-managed matches"
+              value={formatCoins(automationOverview.providerManagedMatchesCount)}
+              detail="Imported from the external cricket feed"
+            />
+            <AutomationMetric
+              label="Live imported matches"
+              value={formatCoins(automationOverview.liveProviderMatchesCount)}
+              detail="Currently marked live by the stored provider state"
+            />
+            <AutomationMetric
+              label="Completed imported matches"
+              value={formatCoins(automationOverview.completedProviderMatchesCount)}
+              detail="Matches with final results already synced"
+            />
+            <AutomationMetric
+              label="Automated markets"
+              value={formatCoins(automationOverview.automatedMarketsCount)}
+              detail="Toss and match-winner markets managed by automation"
+            />
+            <AutomationMetric
+              label="Open automated markets"
+              value={formatCoins(automationOverview.openAutomatedMarketsCount)}
+              detail="Markets currently available without manual action"
+            />
+            <AutomationMetric
+              label="Settled automated markets"
+              value={formatCoins(automationOverview.settledAutomatedMarketsCount)}
+              detail="Markets already resolved from recorded results"
+            />
+          </div>
+          <AutomationControlPanel />
+        </Card>
+
         <Card className="rounded-[32px] p-6 lg:col-span-2">
           <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
             Pending actions
@@ -254,10 +301,11 @@ export default async function AdminPage({
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card className="rounded-[32px] p-6 md:p-8">
           <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
-            Create match
+            Manual override: create match
           </p>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Add a fixture first so markets can be attached to a scheduled IPL match.
+            Imported fixtures should be the default source of truth. Use this only when the provider
+            feed misses a match or you need an emergency fallback.
           </p>
           <div className="mt-5">
             <CreateMatchForm />
@@ -266,10 +314,11 @@ export default async function AdminPage({
 
         <Card className="rounded-[32px] p-6 md:p-8">
           <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
-            Create market
+            Manual override: create market
           </p>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Use comma-separated outcomes. Markets open immediately if the open time is in the past.
+            Standard toss and match-winner markets are created automatically. Use manual creation
+            only for exceptions or experimental market types.
           </p>
           <div className="mt-5">
             <CreateMarketForm
@@ -287,7 +336,8 @@ export default async function AdminPage({
           Match management
         </p>
         <p className="mt-2 text-sm text-[var(--muted)]">
-          Update fixture details and lifecycle status without recreating attached markets.
+          Review imported fixtures, confirm recorded results, and intervene only when automation
+          needs help.
         </p>
         <div className="mt-5 grid gap-4">
           {upcomingMatches.map((match) => (
@@ -303,11 +353,23 @@ export default async function AdminPage({
                   <p className="text-sm text-[var(--muted)]">
                     {match._count.markets} linked market(s). Starts {formatUtcDateTime(match.startsAt)}.
                   </p>
+                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
+                    {match.provider ? `Provider synced${match.lastSyncedAt ? ` • ${formatUtcDateTime(match.lastSyncedAt)}` : ""}` : "Manual fallback match"}
+                  </p>
                 </div>
                 <span className="rounded-full bg-[var(--panel-strong)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]">
                   {match.status}
                 </span>
               </div>
+              {match.markets.length > 0 ? (
+                <p className="mt-3 text-sm text-[var(--muted)]">
+                  Automation coverage:{" "}
+                  {match.markets
+                    .filter((market) => market.autoCreated && market.automationKey)
+                    .map((market) => `${market.automationKey} (${market.status})`)
+                    .join(" • ") || "No auto-created markets yet."}
+                </p>
+              ) : null}
               {renderMatchStatusDetail(match.status) ? (
                 <p className="mt-3 text-sm text-[var(--muted)]">
                   {renderMatchStatusDetail(match.status)}
@@ -523,6 +585,24 @@ function SearchSection({
           ))
         )}
       </div>
+    </div>
+  );
+}
+
+function AutomationMetric({
+  label,
+  value,
+  detail
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-[24px] border border-[var(--line)] bg-[var(--surface-strong)] p-4">
+      <p className="text-sm uppercase tracking-[0.18em] text-[var(--muted)]">{label}</p>
+      <p className="mt-2 text-2xl font-semibold">{value}</p>
+      <p className="mt-2 text-sm text-[var(--muted)]">{detail}</p>
     </div>
   );
 }

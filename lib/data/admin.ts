@@ -76,6 +76,8 @@ export const getAdminPageData = unstable_cache(
             take: pageSize,
             select: {
               id: true,
+              provider: true,
+              providerMatchId: true,
               title: true,
               homeTeam: true,
               awayTeam: true,
@@ -85,6 +87,15 @@ export const getAdminPageData = unstable_cache(
               tossDecision: true,
               winnerTeam: true,
               completedAt: true,
+              lastSyncedAt: true,
+              markets: {
+                select: {
+                  id: true,
+                  status: true,
+                  automationKey: true,
+                  autoCreated: true
+                }
+              },
               _count: {
                 select: {
                   markets: true
@@ -183,6 +194,46 @@ export const getAdminPageData = unstable_cache(
           prisma.ledgerEntry.aggregate({
             _sum: {
               amountDelta: true
+            }
+          }),
+          prisma.match.count({
+            where: {
+              provider: {
+                not: null
+              }
+            }
+          }),
+          prisma.match.count({
+            where: {
+              provider: {
+                not: null
+              },
+              status: "LIVE"
+            }
+          }),
+          prisma.match.count({
+            where: {
+              provider: {
+                not: null
+              },
+              status: "COMPLETED"
+            }
+          }),
+          prisma.market.count({
+            where: {
+              automationEnabled: true
+            }
+          }),
+          prisma.market.count({
+            where: {
+              automationEnabled: true,
+              status: "OPEN"
+            }
+          }),
+          prisma.market.count({
+            where: {
+              automationEnabled: true,
+              status: "SETTLED"
             }
           }),
           hasSearch
@@ -287,6 +338,8 @@ export const getAdminPageData = unstable_cache(
                 take: 5,
                 select: {
                   id: true,
+                  provider: true,
+                  providerMatchId: true,
                   title: true,
                   homeTeam: true,
                   awayTeam: true,
@@ -296,6 +349,7 @@ export const getAdminPageData = unstable_cache(
                   tossDecision: true,
                   winnerTeam: true,
                   completedAt: true,
+                  lastSyncedAt: true,
                   _count: {
                     select: {
                       markets: true
@@ -386,6 +440,12 @@ export const getAdminPageData = unstable_cache(
         recoveryRequestCount,
         userCount,
         totalLedgerVolume,
+        providerManagedMatchesCount,
+        liveProviderMatchesCount,
+        completedProviderMatchesCount,
+        automatedMarketsCount,
+        openAutomatedMarketsCount,
+        settledAutomatedMarketsCount,
         searchUsers,
         searchGroups,
         searchMatches,
@@ -404,6 +464,14 @@ export const getAdminPageData = unstable_cache(
         recoveryRequestCount,
         userCount,
         totalLedgerVolume,
+        automationOverview: {
+          providerManagedMatchesCount,
+          liveProviderMatchesCount,
+          completedProviderMatchesCount,
+          automatedMarketsCount,
+          openAutomatedMarketsCount,
+          settledAutomatedMarketsCount
+        },
         searchResults: {
           term: trimmedSearchTerm,
           users: searchUsers,

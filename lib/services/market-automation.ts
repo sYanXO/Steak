@@ -23,6 +23,11 @@ type AutomationSummary = {
   settledMarketIds: string[];
 };
 
+type MarketAutomationDeps = {
+  prisma: typeof prisma;
+  settleMarketAutomatically: typeof settleMarketAutomatically;
+};
+
 function computeMarketStatus(now: Date, opensAt: Date, closesAt: Date) {
   if (closesAt <= now) {
     return "CLOSED" as const;
@@ -136,8 +141,16 @@ async function createAutomatedMarket(
   return market.id;
 }
 
-export async function runMarketAutomation(now = new Date()): Promise<AutomationSummary> {
-  const admins = await prisma.user.findMany({
+export async function runMarketAutomation(
+  now = new Date(),
+  deps: MarketAutomationDeps = {
+    prisma,
+    settleMarketAutomatically
+  }
+): Promise<AutomationSummary> {
+  const db = deps.prisma;
+
+  const admins = await db.user.findMany({
     where: { role: "ADMIN" },
     orderBy: { createdAt: "asc" },
     take: 1,
@@ -146,7 +159,7 @@ export async function runMarketAutomation(now = new Date()): Promise<AutomationS
 
   const adminId = getAutomationAdminId(admins);
 
-  const matches = await prisma.match.findMany({
+  const matches = await db.match.findMany({
     where: {
       status: {
         in: ["SCHEDULED", "LIVE"]
@@ -172,7 +185,7 @@ export async function runMarketAutomation(now = new Date()): Promise<AutomationS
 
     if (!existingKeys.has(MATCH_WINNER_KEY)) {
       createdMarketIds.push(
-        await createAutomatedMarket(prisma, {
+        await createAutomatedMarket(db, {
           matchId: match.id,
           homeTeam: match.homeTeam,
           awayTeam: match.awayTeam,
@@ -192,7 +205,7 @@ export async function runMarketAutomation(now = new Date()): Promise<AutomationS
       );
 
       createdMarketIds.push(
-        await createAutomatedMarket(prisma, {
+        await createAutomatedMarket(db, {
           matchId: match.id,
           homeTeam: match.homeTeam,
           awayTeam: match.awayTeam,
@@ -207,7 +220,7 @@ export async function runMarketAutomation(now = new Date()): Promise<AutomationS
     }
   }
 
-  const liveMatches = await prisma.match.updateMany({
+  const liveMatches = await db.match.updateMany({
     where: {
       status: "SCHEDULED",
       startsAt: {
@@ -220,7 +233,7 @@ export async function runMarketAutomation(now = new Date()): Promise<AutomationS
     }
   });
 
-  const completedMatches = await prisma.match.updateMany({
+  const completedMatches = await db.match.updateMany({
     where: {
       status: {
         in: ["SCHEDULED", "LIVE"]
@@ -243,7 +256,7 @@ export async function runMarketAutomation(now = new Date()): Promise<AutomationS
     }
   });
 
-  const openedMarketCandidates = await prisma.market.findMany({
+  const openedMarketCandidates = await db.market.findMany({
     where: {
       automationEnabled: true,
       status: "DRAFT",
@@ -262,7 +275,7 @@ export async function runMarketAutomation(now = new Date()): Promise<AutomationS
   const openedMarketIds = openedMarketCandidates.map((market) => market.id);
 
   if (openedMarketIds.length > 0) {
-    await prisma.market.updateMany({
+    await db.market.updateMany({
       where: {
         id: {
           in: openedMarketIds
@@ -274,7 +287,7 @@ export async function runMarketAutomation(now = new Date()): Promise<AutomationS
     });
   }
 
-  const closedMarketCandidates = await prisma.market.findMany({
+  const closedMarketCandidates = await db.market.findMany({
     where: {
       automationEnabled: true,
       status: "OPEN",
@@ -290,7 +303,7 @@ export async function runMarketAutomation(now = new Date()): Promise<AutomationS
   const closedMarketIds = closedMarketCandidates.map((market) => market.id);
 
   if (closedMarketIds.length > 0) {
-    await prisma.market.updateMany({
+    await db.market.updateMany({
       where: {
         id: {
           in: closedMarketIds
@@ -302,7 +315,7 @@ export async function runMarketAutomation(now = new Date()): Promise<AutomationS
     });
   }
 
-  const settleCandidates = await prisma.market.findMany({
+  const settleCandidates = await db.market.findMany({
     where: {
       automationEnabled: true,
       automationKey: {
@@ -352,7 +365,7 @@ export async function runMarketAutomation(now = new Date()): Promise<AutomationS
       continue;
     }
 
-    await settleMarketAutomatically({
+    await deps.settleMarketAutomatically({
       marketId: market.id,
       outcomeId: winningOutcome.id,
       actorId: adminId
