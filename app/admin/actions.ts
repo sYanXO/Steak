@@ -3,6 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { ZodError } from "zod";
 import { auth } from "@/auth";
+import { createSettleMarketAction } from "@/lib/action-factories/settle-market";
 import { cacheTags } from "@/lib/cache-tags";
 import { runIdempotent } from "@/lib/idempotency";
 import {
@@ -22,10 +23,7 @@ import { resolveRecoveryRequest } from "@/lib/services/profile";
 import { actionRequestIdSchema } from "@/lib/validation/admin";
 import { settleMarket } from "@/lib/services/settle-market";
 
-export type SettleMarketActionState = {
-  error?: string;
-  success?: string;
-};
+export type { SettleMarketActionState } from "@/lib/action-factories/settle-market";
 
 export type AdminCreateActionState = {
   error?: string;
@@ -85,73 +83,6 @@ function normalizeDateTimeLocal(value: FormDataEntryValue | null) {
 
 function getRequestId(formData: FormData) {
   return actionRequestIdSchema.parse(String(formData.get("requestId") ?? ""));
-}
-
-type SettleMarketActionDeps = {
-  auth: () => Promise<{
-    user?: {
-      id: string;
-      email?: string | null;
-      role?: "USER" | "ADMIN";
-    } | null;
-  } | null>;
-  settleMarket: typeof settleMarket;
-  revalidatePath: typeof revalidatePath;
-  revalidateTag: typeof revalidateTag;
-  runIdempotent: typeof runIdempotent;
-  logActionStart: typeof logActionStart;
-  logActionSuccess: typeof logActionSuccess;
-  logActionError: typeof logActionError;
-};
-
-export function createSettleMarketAction(deps: SettleMarketActionDeps) {
-  return async function settleMarketAction(
-    marketId: string,
-    _prevState: SettleMarketActionState,
-    formData: FormData
-  ): Promise<SettleMarketActionState> {
-    const session = await deps.auth();
-
-    if (!session?.user?.email || session.user.role !== "ADMIN") {
-      return { error: "Admin authorization required." };
-    }
-
-    const adminUser = session.user;
-
-    deps.logActionStart("admin.settle-market", { adminId: adminUser.id, marketId });
-
-    try {
-      const requestId = getRequestId(formData);
-      const result = await deps.runIdempotent(`settle:${adminUser.id}:${requestId}`, () =>
-        deps.settleMarket({
-          marketId,
-          outcomeId: String(formData.get("outcomeId") ?? ""),
-          adminId: adminUser.id
-        })
-      );
-
-      deps.revalidatePath("/");
-      deps.revalidatePath("/dashboard");
-      deps.revalidatePath("/admin");
-      deps.revalidatePath(`/markets/${marketId}`);
-      deps.revalidateTag(cacheTags.homepage);
-      deps.revalidateTag(cacheTags.market(marketId));
-      deps.revalidateTag(cacheTags.admin);
-
-      deps.logActionSuccess("admin.settle-market", {
-        adminId: adminUser.id,
-        marketId,
-        settledStakeCount: result.settledStakeCount
-      });
-
-      return {
-        success: `Settled ${result.settledStakeCount} stake(s) for ${result.settledOutcome}.`
-      };
-    } catch (error) {
-      deps.logActionError("admin.settle-market", error, { adminId: adminUser.id, marketId });
-      return { error: getActionErrorMessage(error, "Unable to settle market.") };
-    }
-  };
 }
 
 export const settleMarketAction = createSettleMarketAction({

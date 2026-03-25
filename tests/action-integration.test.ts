@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createSettleMarketAction } from "@/app/admin/actions";
-import { createPlaceStakeAction } from "@/app/markets/[marketId]/actions";
-import { createSignUpAction } from "@/app/sign-up/actions";
+import { createSettleMarketAction } from "@/lib/action-factories/settle-market";
+import { createPlaceStakeAction } from "@/lib/action-factories/place-stake";
+import { createSignUpAction } from "@/lib/action-factories/sign-up";
 
 test("createPlaceStakeAction returns auth error when no session is present", async () => {
   const action = createPlaceStakeAction({
