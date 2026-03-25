@@ -52,3 +52,11 @@
 - Added a short-lived cached admin overview data bundle to reduce repeat admin-page latency on back-and-forth navigation.
 - Added a short-lived cached dashboard data bundle scoped per user to reduce repeat dashboard load time.
 - Split market detail loading into cached public market data plus a smaller user-specific lookup to reduce repeat market-page latency.
+
+## Observability
+
+- Added a shared timing logger for server-side page data and mutation paths.
+- Added structured timing logs for admin page data loading.
+- Added structured timing logs for dashboard page data loading.
+- Added structured timing logs for public market data loading.
+- Added structured timing logs for stake placement transactions.

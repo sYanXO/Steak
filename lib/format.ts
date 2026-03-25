@@ -20,8 +20,18 @@ export function formatOdds(value: number) {
   return `${value.toFixed(2)}x`;
 }
 
-export function formatUtcDateTime(value: Date) {
-  return istDateTimeFormatter.format(value);
+export function formatUtcDateTime(value: Date | string | number | null | undefined) {
+  if (value === null || value === undefined) {
+    return "Unknown time";
+  }
+
+  const parsed = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return "Invalid time";
+  }
+
+  return istDateTimeFormatter.format(parsed);
 }
 
 export function formatRelativeDelta(value: number) {

@@ -63,6 +63,11 @@ test("placeStake debits wallet, records ledger entry, and reprices outcomes", as
         return {};
       }
     },
+    outcomeOddsSnapshot: {
+      async createMany() {
+        return { count: 2 };
+      }
+    },
     leaderboardEntry: {
       async deleteMany() {
         return { count: 0 };
