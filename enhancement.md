@@ -50,6 +50,13 @@
 - Added pagination to admin pending markets, match management, recovery requests, recent settlements, and recent top-ups.
 - Fixed authenticated navigation on the home page so logged-in users and admins can return to dashboard/admin after clicking the logo or Home.
 
+## Environment and Seeding
+
+- Added explicit seed profiles for `local-demo`, `staging-demo`, and `production-safe`.
+- Kept local demo seeding as the default so current setup and e2e flows continue to work.
+- Added production-safe seeding behavior that skips demo data and points operators to `bootstrap:admin`.
+- Documented the new seed commands and profile expectations in the README.
+
 ## Cache and Performance
 
 - Added shared cache tags for homepage, admin, market, and dashboard invalidation paths.

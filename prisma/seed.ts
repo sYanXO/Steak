@@ -1,19 +1,39 @@
 import { hash } from "bcryptjs";
 import { PrismaClient, UserRole, LedgerEntryType, MatchStatus, MarketStatus } from "@prisma/client";
+import { getDemoSeedConfig, resolveSeedProfile } from "@/prisma/seed-profiles";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminPasswordHash = await hash("adminpass123", 10);
-  const userPasswordHash = await hash("userpass123", 10);
+  const profile = resolveSeedProfile();
+
+  if (profile === "production-safe") {
+    console.log(
+      JSON.stringify(
+        {
+          profile,
+          seeded: false,
+          message:
+            "Production-safe seed profile skips demo data. Run npm run bootstrap:admin to create the first admin."
+        },
+        null,
+        2
+      )
+    );
+    return;
+  }
+
+  const config = getDemoSeedConfig(profile);
+  const adminPasswordHash = await hash(config.admin.password, 10);
+  const userPasswordHash = await hash(config.user.password, 10);
 
   const [admin, user] = await Promise.all([
     prisma.user.upsert({
-      where: { email: "admin@stakeipl.app" },
+      where: { email: config.admin.email },
       update: {},
       create: {
-        email: "admin@stakeipl.app",
-        name: "Admin User",
+        email: config.admin.email,
+        name: config.admin.name,
         role: UserRole.ADMIN,
         passwordHash: adminPasswordHash,
         wallet: {
@@ -32,11 +52,11 @@ async function main() {
       }
     }),
     prisma.user.upsert({
-      where: { email: "captain@stakeipl.app" },
+      where: { email: config.user.email },
       update: {},
       create: {
-        email: "captain@stakeipl.app",
-        name: "Demo Player",
+        email: config.user.email,
+        name: config.user.name,
         passwordHash: userPasswordHash,
         wallet: {
           create: {
@@ -56,26 +76,26 @@ async function main() {
   ]);
 
   const match = await prisma.match.upsert({
-    where: { id: "seed-match-mi-csk" },
+    where: { id: config.match.id },
     update: {},
     create: {
-      id: "seed-match-mi-csk",
-      title: "Mumbai Indians vs Chennai Super Kings",
-      homeTeam: "Mumbai Indians",
-      awayTeam: "Chennai Super Kings",
+      id: config.match.id,
+      title: config.match.title,
+      homeTeam: config.match.homeTeam,
+      awayTeam: config.match.awayTeam,
       startsAt: new Date("2026-03-28T14:00:00.000Z"),
       status: MatchStatus.SCHEDULED
     }
   });
 
   await prisma.market.upsert({
-    where: { id: "seed-market-mi-csk-winner" },
+    where: { id: config.market.id },
     update: {},
     create: {
-      id: "seed-market-mi-csk-winner",
+      id: config.market.id,
       matchId: match.id,
-      type: "MATCH_WINNER",
-      title: "Match winner",
+      type: config.market.type,
+      title: config.market.title,
       status: MarketStatus.OPEN,
       opensAt: new Date("2026-03-23T08:00:00.000Z"),
       closesAt: new Date("2026-03-28T13:55:00.000Z"),
@@ -90,13 +110,13 @@ async function main() {
   });
 
   const seedOutcomes = await prisma.marketOutcome.findMany({
-    where: { marketId: "seed-market-mi-csk-winner" },
+    where: { marketId: config.market.id },
     orderBy: { order: "asc" }
   });
 
   if (seedOutcomes.length === 2) {
     await prisma.outcomeOddsSnapshot.deleteMany({
-      where: { marketId: "seed-market-mi-csk-winner" }
+      where: { marketId: config.market.id }
     });
 
     const timeline = [
@@ -112,7 +132,7 @@ async function main() {
     await prisma.outcomeOddsSnapshot.createMany({
       data: timeline.flatMap((point) =>
         seedOutcomes.map((outcome, index) => ({
-          marketId: "seed-market-mi-csk-winner",
+          marketId: config.market.id,
           outcomeId: outcome.id,
           oddsValue: point.odds[index],
           totalStaked: index === 0 ? 12400 : 10100,
@@ -123,8 +143,10 @@ async function main() {
   }
 
   console.log({
+    profile,
     admin: admin.email,
-    user: user.email
+    user: user.email,
+    marketId: config.market.id
   });
 }
 

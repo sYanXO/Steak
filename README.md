@@ -62,7 +62,7 @@ npm run db:setup
 That will:
 
 1. run the Prisma migration
-2. seed demo users and a starter market
+2. seed the default `local-demo` profile with demo users and a starter market
 
 Reset the database and reseed it:
 
@@ -75,18 +75,36 @@ Useful direct commands:
 ```bash
 npm run prisma:migrate
 npm run prisma:seed
+npm run prisma:seed:local-demo
+npm run prisma:seed:staging
+npm run prisma:seed:production-safe
 npm run prisma:generate
 npm run bootstrap:admin
 ```
 
+## Seed profiles
+
+`prisma/seed.ts` supports explicit seed profiles via `SEED_PROFILE`:
+
+- `local-demo` (default): local admin + demo user + seeded match/market for development and e2e flows
+- `staging-demo`: staging-scoped demo admin/user plus seeded match/market without reusing the local demo IDs
+- `production-safe`: skips demo data and prints a reminder to use `npm run bootstrap:admin`
+
+`npm run db:reset-demo` is local-profile specific and expects the default `local-demo` seed data.
+
 ## Demo accounts
 
-Seeded credentials:
+Seeded credentials for the default `local-demo` profile:
 
 - admin: `admin@stakeipl.app` / `adminpass123`
 - user: `captain@stakeipl.app` / `userpass123`
 
 The seed also creates one demo IPL market.
+
+The `staging-demo` profile seeds:
+
+- admin: `staging-admin@stakeipl.app` / `adminpass123`
+- user: `staging-player@stakeipl.app` / `userpass123`
 
 ## Admin bootstrap
 
