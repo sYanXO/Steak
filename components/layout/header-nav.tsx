@@ -17,7 +17,7 @@ type HeaderNavProps = {
 };
 
 function isMinimalPublicRoute(pathname: string) {
-  return pathname === "/" || pathname === "/sign-in" || pathname === "/sign-up";
+  return pathname === "/sign-in" || pathname === "/sign-up";
 }
 
 function isActive(pathname: string, href: string) {
