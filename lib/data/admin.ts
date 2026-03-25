@@ -1,6 +1,8 @@
 import { measureAsync } from "@/lib/observability";
 import { prisma } from "@/lib/prisma";
 
+const VISIBLE_PROVIDER_EXCLUSIONS = ["BENCHMARK"];
+
 type AdminPageDataInput = {
   pendingPage: number;
   matchesPage: number;
@@ -64,6 +66,9 @@ export async function getAdminPageData({
           }),
           prisma.match.findMany({
             where: {
+              provider: {
+                notIn: VISIBLE_PROVIDER_EXCLUSIONS
+              },
               status: {
                 not: "ARCHIVED"
               }
@@ -102,6 +107,9 @@ export async function getAdminPageData({
           }),
           prisma.match.count({
             where: {
+              provider: {
+                notIn: VISIBLE_PROVIDER_EXCLUSIONS
+              },
               status: {
                 not: "ARCHIVED"
               }
@@ -197,6 +205,11 @@ export async function getAdminPageData({
             where: {
               provider: {
                 not: null
+              },
+              NOT: {
+                provider: {
+                  in: VISIBLE_PROVIDER_EXCLUSIONS
+                }
               }
             }
           }),
@@ -205,6 +218,11 @@ export async function getAdminPageData({
               provider: {
                 not: null
               },
+              NOT: {
+                provider: {
+                  in: VISIBLE_PROVIDER_EXCLUSIONS
+                }
+              },
               status: "LIVE"
             }
           }),
@@ -212,6 +230,11 @@ export async function getAdminPageData({
             where: {
               provider: {
                 not: null
+              },
+              NOT: {
+                provider: {
+                  in: VISIBLE_PROVIDER_EXCLUSIONS
+                }
               },
               status: "COMPLETED"
             }
@@ -307,6 +330,9 @@ export async function getAdminPageData({
           hasSearch
             ? prisma.match.findMany({
                 where: {
+                  provider: {
+                    notIn: VISIBLE_PROVIDER_EXCLUSIONS
+                  },
                   status: {
                     not: "ARCHIVED"
                   },
