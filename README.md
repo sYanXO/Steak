@@ -74,6 +74,7 @@ Useful direct commands:
 
 ```bash
 npm run prisma:migrate
+npm run db:migrate:deploy
 npm run prisma:seed
 npm run prisma:seed:local-demo
 npm run prisma:seed:staging
@@ -93,6 +94,8 @@ npm run bootstrap:admin
 
 `npm run db:reset-demo` is local-profile specific and expects the default `local-demo` seed data.
 
+If `DATABASE_URL` points to a non-local database and `SEED_PROFILE` is not set, seeding now defaults to `production-safe`.
+
 Before deploying the migration that adds partial unique indexes for open recovery requests and pending credential-change requests, audit the target database with:
 
 ```bash
@@ -101,6 +104,37 @@ npm run db:audit-request-constraints
 ```
 
 If that command reports `safeToApplyConstraintMigration: true`, `prisma migrate deploy` should apply the new constraint migration without duplicate-row failures.
+
+## Shared DB Safety
+
+If your local environment points at the same remote database as Vercel, treat that database as production.
+
+Protected commands:
+
+- `npm run db:setup`
+- `npm run db:reset`
+- `npm run db:reset-demo`
+- `npm run prisma:migrate`
+
+Those commands now refuse to run against non-local databases unless you explicitly opt in.
+
+For a shared or production database, prefer:
+
+```bash
+source /home/sreayan/.nvm/nvm.sh
+set -a && source .env.local
+npm run db:audit-request-constraints
+npm run db:migrate:deploy
+```
+
+Escape hatches:
+
+- `ALLOW_DESTRUCTIVE_DB_COMMANDS=true`: allows destructive local-dev style DB commands against a remote DB
+- `ALLOW_REMOTE_DEMO_SEED=true`: allows demo seed profiles against a remote DB
+
+Do not use either escape hatch unless you intentionally want to mutate a shared or production database.
+
+For the exact shared-database deploy sequence, see [deploy-checklist.md](/home/sreayan/stake-ipl/deploy-checklist.md).
 
 ## Demo accounts
 

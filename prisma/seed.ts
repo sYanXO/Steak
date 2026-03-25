@@ -1,6 +1,7 @@
 import { hash } from "bcryptjs";
 import { PrismaClient, UserRole, LedgerEntryType, MatchStatus, MarketStatus } from "@prisma/client";
 import { getDemoSeedConfig, resolveSeedProfile } from "@/prisma/seed-profiles";
+import { assertDemoSeedAllowed } from "@/prisma/safety";
 
 const prisma = new PrismaClient();
 
@@ -22,6 +23,8 @@ async function main() {
     );
     return;
   }
+
+  assertDemoSeedAllowed(profile);
 
   const config = getDemoSeedConfig(profile);
   const adminPasswordHash = await hash(config.admin.password, 10);

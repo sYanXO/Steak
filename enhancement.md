@@ -62,6 +62,8 @@
 - Added indexes for the main market, match, stake, leaderboard, ledger, admin-log, recovery-request, and credential-change query paths.
 - Added partial unique indexes to enforce one open recovery request per user and one unverified credential-change request per user/type at the database layer.
 - Added a database audit command to verify those partial unique indexes are safe to apply before deployment.
+- Added repo-level safety guards so destructive local-dev DB commands refuse to run against non-local databases by default.
+- Made seeding default to `production-safe` on non-local databases unless a demo seed is explicitly allowed.
 
 ## Safety Controls
 

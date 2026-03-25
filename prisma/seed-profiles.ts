@@ -1,5 +1,7 @@
 export type SeedProfile = "local-demo" | "staging-demo" | "production-safe";
 
+import { isLocalDatabaseUrl } from "@/prisma/safety";
+
 type DemoSeedConfig = {
   profile: Extract<SeedProfile, "local-demo" | "staging-demo">;
   admin: {
@@ -76,11 +78,14 @@ const demoSeedProfiles: Record<DemoSeedConfig["profile"], DemoSeedConfig> = {
   }
 };
 
-export function resolveSeedProfile(rawValue = process.env.SEED_PROFILE): SeedProfile {
+export function resolveSeedProfile(
+  rawValue = process.env.SEED_PROFILE,
+  databaseUrl = process.env.DATABASE_URL
+): SeedProfile {
   const normalized = rawValue?.trim().toLowerCase();
 
   if (!normalized) {
-    return "local-demo";
+    return isLocalDatabaseUrl(databaseUrl) ? "local-demo" : "production-safe";
   }
 
   if (

@@ -1,4 +1,5 @@
 import { PrismaClient, LedgerEntryType, MatchStatus, MarketStatus } from "@prisma/client";
+import { assertDestructiveDbCommandAllowed } from "@/prisma/safety";
 import { recomputeAllGroupLeaderboards, recomputeGlobalLeaderboard } from "@/lib/services/leaderboard";
 
 const prisma = new PrismaClient();
@@ -6,6 +7,8 @@ const prisma = new PrismaClient();
 const STARTER_BALANCE = 5000;
 
 async function main() {
+  assertDestructiveDbCommandAllowed("db:reset-demo");
+
   await prisma.$transaction(async (tx) => {
     const verificationMatches = await tx.match.findMany({
       where: {

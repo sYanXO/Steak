@@ -2,9 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { getDemoSeedConfig, resolveSeedProfile } from "@/prisma/seed-profiles";
 
-test("resolveSeedProfile defaults to local-demo", () => {
-  assert.equal(resolveSeedProfile(undefined), "local-demo");
-  assert.equal(resolveSeedProfile(""), "local-demo");
+test("resolveSeedProfile defaults by database safety context", () => {
+  assert.equal(
+    resolveSeedProfile(undefined, "postgresql://user:pass@localhost:5432/app"),
+    "local-demo"
+  );
+  assert.equal(
+    resolveSeedProfile("", "postgresql://user:pass@ep-prod.neon.tech/db"),
+    "production-safe"
+  );
 });
 
 test("resolveSeedProfile accepts the supported profiles", () => {
