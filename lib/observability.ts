@@ -1,4 +1,49 @@
 type TimingMeta = Record<string, string | number | boolean | undefined>;
+type LogMeta = Record<string, string | number | boolean | undefined | null>;
+
+export function getErrorMessage(error: unknown, fallback = "unknown-error") {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "string" && error.trim().length > 0) {
+    return error;
+  }
+
+  return fallback;
+}
+
+export function logEvent(name: string, meta: LogMeta = {}) {
+  console.info(
+    JSON.stringify({
+      type: "event",
+      name,
+      ...meta
+    })
+  );
+}
+
+export function logActionStart(name: string, meta: LogMeta = {}) {
+  logEvent(name, {
+    phase: "start",
+    ...meta
+  });
+}
+
+export function logActionSuccess(name: string, meta: LogMeta = {}) {
+  logEvent(name, {
+    phase: "success",
+    ...meta
+  });
+}
+
+export function logActionError(name: string, error: unknown, meta: LogMeta = {}) {
+  logEvent(name, {
+    phase: "error",
+    message: getErrorMessage(error),
+    ...meta
+  });
+}
 
 export async function measureAsync<T>(
   name: string,
@@ -14,7 +59,7 @@ export async function measureAsync<T>(
   } catch (error) {
     logTiming(name, performance.now() - start, "error", {
       ...meta,
-      message: error instanceof Error ? error.message : "unknown-error"
+      message: getErrorMessage(error)
     });
     throw error;
   }

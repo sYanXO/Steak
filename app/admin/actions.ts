@@ -6,6 +6,12 @@ import { auth } from "@/auth";
 import { cacheTags } from "@/lib/cache-tags";
 import { runIdempotent } from "@/lib/idempotency";
 import {
+  getErrorMessage,
+  logActionError,
+  logActionStart,
+  logActionSuccess
+} from "@/lib/observability";
+import {
   createMarket,
   createMatch,
   manualTopUp,
@@ -39,11 +45,7 @@ function getActionErrorMessage(error: unknown, fallback: string) {
     return error.issues[0]?.message ?? fallback;
   }
 
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return fallback;
+  return getErrorMessage(error, fallback);
 }
 
 function normalizeDateTimeLocal(value: FormDataEntryValue | null) {
@@ -85,42 +87,83 @@ function getRequestId(formData: FormData) {
   return actionRequestIdSchema.parse(String(formData.get("requestId") ?? ""));
 }
 
-export async function settleMarketAction(
-  marketId: string,
-  _prevState: SettleMarketActionState,
-  formData: FormData
-): Promise<SettleMarketActionState> {
-  const session = await auth();
+type SettleMarketActionDeps = {
+  auth: () => Promise<{
+    user?: {
+      id: string;
+      email?: string | null;
+      role?: "USER" | "ADMIN";
+    } | null;
+  } | null>;
+  settleMarket: typeof settleMarket;
+  revalidatePath: typeof revalidatePath;
+  revalidateTag: typeof revalidateTag;
+  runIdempotent: typeof runIdempotent;
+  logActionStart: typeof logActionStart;
+  logActionSuccess: typeof logActionSuccess;
+  logActionError: typeof logActionError;
+};
 
-  if (!session?.user?.email || session.user.role !== "ADMIN") {
-    return { error: "Admin authorization required." };
-  }
+export function createSettleMarketAction(deps: SettleMarketActionDeps) {
+  return async function settleMarketAction(
+    marketId: string,
+    _prevState: SettleMarketActionState,
+    formData: FormData
+  ): Promise<SettleMarketActionState> {
+    const session = await deps.auth();
 
-  try {
-    const requestId = getRequestId(formData);
-    const result = await runIdempotent(`settle:${session.user.id}:${requestId}`, () =>
-      settleMarket({
+    if (!session?.user?.email || session.user.role !== "ADMIN") {
+      return { error: "Admin authorization required." };
+    }
+
+    const adminUser = session.user;
+
+    deps.logActionStart("admin.settle-market", { adminId: adminUser.id, marketId });
+
+    try {
+      const requestId = getRequestId(formData);
+      const result = await deps.runIdempotent(`settle:${adminUser.id}:${requestId}`, () =>
+        deps.settleMarket({
+          marketId,
+          outcomeId: String(formData.get("outcomeId") ?? ""),
+          adminId: adminUser.id
+        })
+      );
+
+      deps.revalidatePath("/");
+      deps.revalidatePath("/dashboard");
+      deps.revalidatePath("/admin");
+      deps.revalidatePath(`/markets/${marketId}`);
+      deps.revalidateTag(cacheTags.homepage);
+      deps.revalidateTag(cacheTags.market(marketId));
+      deps.revalidateTag(cacheTags.admin);
+
+      deps.logActionSuccess("admin.settle-market", {
+        adminId: adminUser.id,
         marketId,
-        outcomeId: String(formData.get("outcomeId") ?? ""),
-        adminId: session.user.id
-      })
-    );
+        settledStakeCount: result.settledStakeCount
+      });
 
-    revalidatePath("/");
-    revalidatePath("/dashboard");
-    revalidatePath("/admin");
-    revalidatePath(`/markets/${marketId}`);
-    revalidateTag(cacheTags.homepage);
-    revalidateTag(cacheTags.market(marketId));
-    revalidateTag(cacheTags.admin);
-
-    return {
-      success: `Settled ${result.settledStakeCount} stake(s) for ${result.settledOutcome}.`
-    };
-  } catch (error) {
-    return { error: getActionErrorMessage(error, "Unable to settle market.") };
-  }
+      return {
+        success: `Settled ${result.settledStakeCount} stake(s) for ${result.settledOutcome}.`
+      };
+    } catch (error) {
+      deps.logActionError("admin.settle-market", error, { adminId: adminUser.id, marketId });
+      return { error: getActionErrorMessage(error, "Unable to settle market.") };
+    }
+  };
 }
+
+export const settleMarketAction = createSettleMarketAction({
+  auth,
+  settleMarket,
+  revalidatePath,
+  revalidateTag,
+  runIdempotent,
+  logActionStart,
+  logActionSuccess,
+  logActionError
+});
 
 export async function createMatchAction(
   _prevState: AdminCreateActionState,
@@ -131,6 +174,8 @@ export async function createMatchAction(
   if (!session?.user?.email || session.user.role !== "ADMIN") {
     return { error: "Admin authorization required." };
   }
+
+  logActionStart("admin.create-match", { adminId: session.user.id });
 
   try {
     const match = await createMatch({
@@ -146,10 +191,16 @@ export async function createMatchAction(
     revalidateTag(cacheTags.homepage);
     revalidateTag(cacheTags.admin);
 
+    logActionSuccess("admin.create-match", {
+      adminId: session.user.id,
+      matchId: match.id
+    });
+
     return {
       success: `Created match ${match.homeTeam} vs ${match.awayTeam}.`
     };
   } catch (error) {
+    logActionError("admin.create-match", error, { adminId: session.user.id });
     return { error: getActionErrorMessage(error, "Unable to create match.") };
   }
 }
@@ -163,6 +214,8 @@ export async function createMarketAction(
   if (!session?.user?.email || session.user.role !== "ADMIN") {
     return { error: "Admin authorization required." };
   }
+
+  logActionStart("admin.create-market", { adminId: session.user.id });
 
   try {
     const market = await createMarket({
@@ -182,10 +235,16 @@ export async function createMarketAction(
     revalidateTag(cacheTags.market(market.id));
     revalidateTag(cacheTags.admin);
 
+    logActionSuccess("admin.create-market", {
+      adminId: session.user.id,
+      marketId: market.id
+    });
+
     return {
       success: `Created market ${market.title}.`
     };
   } catch (error) {
+    logActionError("admin.create-market", error, { adminId: session.user.id });
     return { error: getActionErrorMessage(error, "Unable to create market.") };
   }
 }
@@ -200,6 +259,8 @@ export async function updateMatchAction(
   if (!session?.user?.email || session.user.role !== "ADMIN") {
     return { error: "Admin authorization required." };
   }
+
+  logActionStart("admin.update-match", { adminId: session.user.id, matchId });
 
   try {
     const match = await updateMatch({
@@ -222,10 +283,17 @@ export async function updateMatchAction(
     revalidateTag(cacheTags.homepage);
     revalidateTag(cacheTags.admin);
 
+    logActionSuccess("admin.update-match", {
+      adminId: session.user.id,
+      matchId: match.id,
+      status: match.status
+    });
+
     return {
       success: `Updated match ${match.homeTeam} vs ${match.awayTeam}.`
     };
   } catch (error) {
+    logActionError("admin.update-match", error, { adminId: session.user.id, matchId });
     return { error: getActionErrorMessage(error, "Unable to update match.") };
   }
 }
@@ -240,6 +308,8 @@ export async function updateMarketStatusAction(
   if (!session?.user?.email || session.user.role !== "ADMIN") {
     return { error: "Admin authorization required." };
   }
+
+  logActionStart("admin.update-market-status", { adminId: session.user.id, marketId });
 
   try {
     const requestId = getRequestId(formData);
@@ -258,6 +328,13 @@ export async function updateMarketStatusAction(
     revalidateTag(cacheTags.market(market.id));
     revalidateTag(cacheTags.admin);
 
+    logActionSuccess("admin.update-market-status", {
+      adminId: session.user.id,
+      marketId: market.id,
+      status: market.status,
+      refundedStakeCount: market.refundedStakeCount
+    });
+
     return {
       success:
         market.status === "VOID"
@@ -266,6 +343,10 @@ export async function updateMarketStatusAction(
       meta: market.status === "VOID" ? { refundedStakeCount: market.refundedStakeCount } : undefined
     };
   } catch (error) {
+    logActionError("admin.update-market-status", error, {
+      adminId: session.user.id,
+      marketId
+    });
     return { error: getActionErrorMessage(error, "Unable to update market status.") };
   }
 }
@@ -279,6 +360,8 @@ export async function manualTopUpAction(
   if (!session?.user?.email || session.user.role !== "ADMIN") {
     return { error: "Admin authorization required." };
   }
+
+  logActionStart("admin.manual-top-up", { adminId: session.user.id });
 
   try {
     const requestId = getRequestId(formData);
@@ -296,10 +379,17 @@ export async function manualTopUpAction(
     revalidateTag(cacheTags.admin);
     revalidateTag(cacheTags.dashboard(result.userId));
 
+    logActionSuccess("admin.manual-top-up", {
+      adminId: session.user.id,
+      userId: result.userId,
+      amount: result.amount
+    });
+
     return {
       success: `Added ${result.amount} coins to ${result.userLabel}.`
     };
   } catch (error) {
+    logActionError("admin.manual-top-up", error, { adminId: session.user.id });
     return { error: getActionErrorMessage(error, "Unable to top up wallet.") };
   }
 }
@@ -315,6 +405,8 @@ export async function resolveRecoveryRequestAction(
     return { error: "Admin authorization required." };
   }
 
+  logActionStart("admin.resolve-recovery-request", { adminId: session.user.id, requestId });
+
   try {
     const user = await resolveRecoveryRequest({
       requestId,
@@ -328,10 +420,20 @@ export async function resolveRecoveryRequestAction(
     revalidateTag(cacheTags.admin);
     revalidateTag(cacheTags.dashboard(user.id));
 
+    logActionSuccess("admin.resolve-recovery-request", {
+      adminId: session.user.id,
+      requestId,
+      userId: user.id
+    });
+
     return {
       success: `Recovery request resolved for ${user.email}.`
     };
   } catch (error) {
+    logActionError("admin.resolve-recovery-request", error, {
+      adminId: session.user.id,
+      requestId
+    });
     return { error: getActionErrorMessage(error, "Unable to resolve recovery request.") };
   }
 }

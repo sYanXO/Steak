@@ -30,6 +30,7 @@
   - match update behavior
   - match archive behavior
 - Expanded browser e2e coverage to include admin-side match creation and market creation flows.
+- Added integration-style server action tests for auth-sensitive sign-up, stake placement, and admin settlement boundaries without relying on browser automation.
 - Verified build passes after the new admin and refund flows.
 - Verified TypeScript passes after admin search and match archive updates.
 
@@ -91,6 +92,8 @@
 - Added structured timing logs for dashboard page data loading.
 - Added structured timing logs for public market data loading.
 - Added structured timing logs for stake placement transactions.
+- Added structured action lifecycle logs for admin mutations, auth flows, profile mutations, group actions, and stake placement.
+- Added a shared error-message normalizer and unit coverage for structured observability events.
 
 ## Stability Follow-Up
 

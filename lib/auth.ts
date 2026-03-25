@@ -4,6 +4,7 @@ import type { JWT } from "next-auth/jwt";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { compare } from "bcryptjs";
+import { logActionError, logActionStart, logActionSuccess } from "@/lib/observability";
 import { prisma } from "@/lib/prisma";
 import {
   consumeSignInAttempt,
@@ -31,27 +32,33 @@ export const authConfig = {
       },
       async authorize(rawCredentials) {
         const credentials = signInSchema.parse(rawCredentials);
+        const email = credentials.email.toLowerCase();
+        logActionStart("auth.sign-in", { email });
         const rateLimit = consumeSignInAttempt(credentials.email);
 
         if (!rateLimit.allowed) {
+          logActionError("auth.sign-in", "rate-limited", { email });
           return null;
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase() }
+          where: { email }
         });
 
         if (!user?.passwordHash) {
+          logActionError("auth.sign-in", "missing-user-or-password", { email });
           return null;
         }
 
         const isValid = await compare(credentials.password, user.passwordHash);
 
         if (!isValid) {
+          logActionError("auth.sign-in", "invalid-password", { email, userId: user.id });
           return null;
         }
 
         resetSignInAttempts(credentials.email);
+        logActionSuccess("auth.sign-in", { email, userId: user.id, role: user.role });
 
         return {
           id: user.id,

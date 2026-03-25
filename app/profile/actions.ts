@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
+import { logActionError, logActionStart, logActionSuccess } from "@/lib/observability";
 import {
   createRecoveryRequest,
   requestEmailChange,
@@ -25,6 +26,8 @@ export async function createRecoveryRequestAction(
     return { error: "Sign in required." };
   }
 
+  logActionStart("profile.create-recovery-request", { userId: session.user.id });
+
   try {
     await createRecoveryRequest({
       userId: session.user.id,
@@ -36,10 +39,13 @@ export async function createRecoveryRequestAction(
     revalidatePath("/profile");
     revalidatePath("/admin");
 
+    logActionSuccess("profile.create-recovery-request", { userId: session.user.id });
+
     return {
       success: "Recovery request submitted. Admin review is now required for an email correction."
     };
   } catch (error) {
+    logActionError("profile.create-recovery-request", error, { userId: session.user.id });
     if (error instanceof Error) {
       return { error: error.message };
     }
@@ -58,6 +64,8 @@ export async function requestEmailChangeAction(
     return { error: "Sign in required." };
   }
 
+  logActionStart("profile.request-email-change", { userId: session.user.id });
+
   try {
     const request = await requestEmailChange({
       userId: session.user.id,
@@ -67,10 +75,16 @@ export async function requestEmailChangeAction(
 
     revalidatePath("/profile");
 
+    logActionSuccess("profile.request-email-change", {
+      userId: session.user.id,
+      requestId: request.id
+    });
+
     return {
       success: `OTP sent for email change. Request ID: ${request.id}`
     };
   } catch (error) {
+    logActionError("profile.request-email-change", error, { userId: session.user.id });
     if (error instanceof Error) {
       return { error: error.message };
     }
@@ -89,6 +103,8 @@ export async function requestPasswordChangeAction(
     return { error: "Sign in required." };
   }
 
+  logActionStart("profile.request-password-change", { userId: session.user.id });
+
   try {
     const request = await requestPasswordChange({
       userId: session.user.id,
@@ -99,10 +115,16 @@ export async function requestPasswordChangeAction(
 
     revalidatePath("/profile");
 
+    logActionSuccess("profile.request-password-change", {
+      userId: session.user.id,
+      requestId: request.id
+    });
+
     return {
       success: `OTP sent for password change. Request ID: ${request.id}`
     };
   } catch (error) {
+    logActionError("profile.request-password-change", error, { userId: session.user.id });
     if (error instanceof Error) {
       return { error: error.message };
     }
@@ -121,6 +143,8 @@ export async function verifyCredentialOtpAction(
     return { error: "Sign in required." };
   }
 
+  logActionStart("profile.verify-credential-otp", { userId: session.user.id });
+
   try {
     const type = await verifyCredentialOtp({
       userId: session.user.id,
@@ -130,13 +154,19 @@ export async function verifyCredentialOtpAction(
 
     revalidatePath("/profile");
 
+    logActionSuccess("profile.verify-credential-otp", {
+      userId: session.user.id,
+      type
+    });
+
     return {
       success:
         type === "EMAIL"
           ? "Email updated successfully."
           : "Password updated successfully."
-    };
+      };
   } catch (error) {
+    logActionError("profile.verify-credential-otp", error, { userId: session.user.id });
     if (error instanceof Error) {
       return { error: error.message };
     }
@@ -155,6 +185,8 @@ export async function updateAdminOwnProfileAction(
     return { error: "Admin authorization required." };
   }
 
+  logActionStart("profile.update-admin-own-profile", { userId: session.user.id });
+
   try {
     const user = await updateAdminOwnProfile({
       userId: session.user.id,
@@ -164,10 +196,16 @@ export async function updateAdminOwnProfileAction(
 
     revalidatePath("/profile");
 
+    logActionSuccess("profile.update-admin-own-profile", {
+      userId: session.user.id,
+      email: user.email
+    });
+
     return {
       success: `Profile updated for ${user.email}. Sign out and sign back in to refresh your session email.`
     };
   } catch (error) {
+    logActionError("profile.update-admin-own-profile", error, { userId: session.user.id });
     if (error instanceof Error) {
       return { error: error.message };
     }
