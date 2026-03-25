@@ -13,6 +13,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { getAdminPageData } from "@/lib/data/admin";
 import { formatCoins, formatUtcDateTime } from "@/lib/format";
 import { parsePageParam } from "@/lib/pagination";
+import { getAdminRedirect } from "@/lib/page-state";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,10 @@ function toDateTimeLocalValue(date: Date) {
   const shifted = new Date(date.getTime() + offsetMillis);
 
   return shifted.toISOString().slice(0, 16);
+}
+
+function toOptionalDateTimeLocalValue(date: Date | null) {
+  return date ? toDateTimeLocalValue(date) : "";
 }
 
 function renderMatchStatusDetail(status: "SCHEDULED" | "LIVE" | "COMPLETED" | "CANCELLED" | "ARCHIVED") {
@@ -54,14 +59,10 @@ export default async function AdminPage({
   const topUpsPage = parsePageParam(params.topUpsPage);
   const searchTerm = parseSearchTerm(params.q);
 
-  if (!session?.user) {
-    redirect("/sign-in");
-  }
+  const redirectTarget = getAdminRedirect(session);
 
-  const isAdmin = session.user.role === "ADMIN";
-
-  if (!isAdmin) {
-    redirect("/dashboard");
+  if (redirectTarget) {
+    redirect(redirectTarget);
   }
 
   const {
@@ -312,6 +313,12 @@ export default async function AdminPage({
                   {renderMatchStatusDetail(match.status)}
                 </p>
               ) : null}
+              {match.tossWinner || match.winnerTeam ? (
+                <p className="mt-2 text-sm text-[var(--muted)]">
+                  {match.tossWinner ? `Toss: ${match.tossWinner}${match.tossDecision ? ` chose to ${match.tossDecision.toLowerCase()}` : ""}. ` : ""}
+                  {match.winnerTeam ? `Winner: ${match.winnerTeam}.` : ""}
+                </p>
+              ) : null}
               <UpdateMatchForm
                 match={{
                   id: match.id,
@@ -319,6 +326,10 @@ export default async function AdminPage({
                   homeTeam: match.homeTeam,
                   awayTeam: match.awayTeam,
                   startsAtLocalValue: toDateTimeLocalValue(match.startsAt),
+                  tossWinner: match.tossWinner,
+                  tossDecision: match.tossDecision,
+                  winnerTeam: match.winnerTeam,
+                  completedAtLocalValue: toOptionalDateTimeLocalValue(match.completedAt),
                   status: match.status
                 }}
               />

@@ -1,23 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppHeader } from "@/components/layout/app-header";
-
-const themeScript = `
-(() => {
-  const storageKey = "stake-ipl-theme";
-  const storedTheme = window.localStorage.getItem(storageKey);
-  const theme =
-    storedTheme === "light" || storedTheme === "dark"
-      ? storedTheme
-      : window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-
-  const root = document.documentElement;
-  root.classList.toggle("dark", theme === "dark");
-  root.style.colorScheme = theme;
-})();
-`;
+import { themeScript } from "@/lib/theme";
 
 export const metadata: Metadata = {
   title: "Stake IPL",

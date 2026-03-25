@@ -4,6 +4,7 @@ import { CreateGroupForm } from "@/components/groups/create-group-form";
 import { JoinGroupForm } from "@/components/groups/join-group-form";
 import { Card } from "@/components/ui/card";
 import { formatCoins } from "@/lib/format";
+import { getSignInRedirect } from "@/lib/page-state";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -11,12 +12,16 @@ export const dynamic = "force-dynamic";
 export default async function GroupsPage() {
   const session = await auth();
 
-  if (!session?.user?.email) {
-    redirect("/sign-in");
+  const redirectTarget = getSignInRedirect(session);
+
+  if (redirectTarget) {
+    redirect(redirectTarget);
   }
 
+  const userId = session!.user!.id;
+
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: userId },
     select: {
       id: true,
       memberships: {

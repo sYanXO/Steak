@@ -23,7 +23,9 @@ Create [`.env.local`](/home/sreayan/stake-ipl/.env.local) with:
 
 ```env
 DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
 AUTH_SECRET="replace-with-a-long-random-secret"
+CRON_SECRET="replace-with-a-long-random-secret"
 AUTH_GOOGLE_ID=""
 AUTH_GOOGLE_SECRET=""
 SMTP_HOST=""
@@ -36,6 +38,8 @@ SMTP_FROM=""
 
 Google auth is optional. If `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` are blank, the UI hides the Google sign-in button.
 OTP-backed self-service email/password changes require the SMTP env vars above.
+`DIRECT_URL` should point at the direct database connection for Prisma migrations.
+`CRON_SECRET` secures internal automation routes.
 
 ## Install
 
@@ -134,7 +138,7 @@ Escape hatches:
 
 Do not use either escape hatch unless you intentionally want to mutate a shared or production database.
 
-For the exact shared-database deploy sequence, see [deploy-checklist.md](/home/sreayan/stake-ipl/deploy-checklist.md).
+Use the shared-database deploy sequence above as the canonical safe migration and deployment flow.
 
 ## Demo accounts
 
@@ -182,6 +186,24 @@ Production validation:
 npm run build
 npx next typegen && npx tsc --noEmit
 ```
+
+## Automated market workflow
+
+The app now supports a cron-safe automation route at `/api/cron/market-automation`.
+
+Use it to:
+
+- auto-create default `MATCH_WINNER` and `TOSS_WINNER` markets for scheduled/live matches
+- open automated markets when `opensAt` passes
+- close automated markets when `closesAt` passes
+- auto-settle toss and match-winner markets once the corresponding result is recorded on the match
+
+Protect the route with `CRON_SECRET` and call it with either:
+
+- `Authorization: Bearer <CRON_SECRET>`
+- `x-cron-secret: <CRON_SECRET>`
+
+To make auto-settlement work, record the official toss and match result fields from the admin match-management form.
 
 ## Current product surface
 

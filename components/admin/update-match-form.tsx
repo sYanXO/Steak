@@ -13,6 +13,10 @@ type UpdateMatchFormProps = {
     homeTeam: string;
     awayTeam: string;
     startsAtLocalValue: string;
+    tossWinner?: string | null;
+    tossDecision?: string | null;
+    winnerTeam?: string | null;
+    completedAtLocalValue?: string;
     status: "SCHEDULED" | "LIVE" | "COMPLETED" | "CANCELLED" | "ARCHIVED";
   };
 };
@@ -84,6 +88,51 @@ export function UpdateMatchForm({ match }: UpdateMatchFormProps) {
               </option>
             ))}
           </select>
+        </label>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block text-sm font-medium">
+          Toss winner
+          <input
+            type="text"
+            name="tossWinner"
+            defaultValue={match.tossWinner ?? ""}
+            placeholder={`${match.homeTeam} or ${match.awayTeam}`}
+            className="mt-2 w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 outline-none"
+          />
+        </label>
+        <label className="block text-sm font-medium">
+          Toss decision
+          <input
+            type="text"
+            name="tossDecision"
+            defaultValue={match.tossDecision ?? ""}
+            placeholder="BAT / BOWL"
+            className="mt-2 w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 outline-none"
+          />
+        </label>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block text-sm font-medium">
+          Match winner
+          <input
+            type="text"
+            name="winnerTeam"
+            defaultValue={match.winnerTeam ?? ""}
+            placeholder={`${match.homeTeam} or ${match.awayTeam}`}
+            className="mt-2 w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 outline-none"
+          />
+        </label>
+        <label className="block text-sm font-medium">
+          Match completed at
+          <input
+            type="datetime-local"
+            name="completedAt"
+            defaultValue={match.completedAtLocalValue ?? ""}
+            className="mt-2 w-full rounded-2xl border border-[var(--field-border)] bg-[var(--field-bg)] px-4 py-3 outline-none"
+          />
         </label>
       </div>
 

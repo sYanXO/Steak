@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum UserRole {
@@ -129,15 +130,19 @@ model LedgerEntry {
 }
 
 model Match {
-  id          String       @id @default(cuid())
-  title       String
-  homeTeam    String
-  awayTeam    String
-  startsAt    DateTime
-  status      MatchStatus  @default(SCHEDULED)
-  markets     Market[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id           String       @id @default(cuid())
+  title        String
+  homeTeam     String
+  awayTeam     String
+  startsAt     DateTime
+  status       MatchStatus  @default(SCHEDULED)
+  tossWinner   String?
+  tossDecision String?
+  winnerTeam   String?
+  completedAt  DateTime?
+  markets      Market[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   @@index([status, startsAt])
 }
@@ -153,6 +158,9 @@ model Market {
   closesAt           DateTime
   settledAt          DateTime?
   settledOutcomeId   String?
+  automationEnabled  Boolean       @default(false)
+  autoCreated        Boolean       @default(false)
+  automationKey      String?
   pricingMetadata    Json?
   outcomes           MarketOutcome[]
   oddsSnapshots      OutcomeOddsSnapshot[]
@@ -162,6 +170,9 @@ model Market {
 
   @@index([status, closesAt])
   @@index([matchId, status])
+  @@index([automationEnabled, status, opensAt])
+  @@index([automationEnabled, status, closesAt])
+  @@index([automationKey, status])
 }
 
 model MarketOutcome {

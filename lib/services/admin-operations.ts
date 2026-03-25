@@ -44,6 +44,10 @@ type UpdateMatchInput = AdminIdentity & {
   homeTeam: string;
   awayTeam: string;
   startsAt: string;
+  tossWinner?: string;
+  tossDecision?: string;
+  winnerTeam?: string;
+  completedAt?: string;
   status: "SCHEDULED" | "LIVE" | "COMPLETED" | "CANCELLED" | "ARCHIVED";
 };
 
@@ -331,6 +335,10 @@ export async function updateMatch(rawInput: UpdateMatchInput) {
   return prisma.$transaction(async (tx) => {
     const admin = await requireAdmin(tx, rawInput.adminId);
     const startsAt = new Date(input.startsAt);
+    const tossWinner = input.tossWinner?.trim() ? input.tossWinner.trim() : null;
+    const tossDecision = input.tossDecision?.trim() ? input.tossDecision.trim() : null;
+    const winnerTeam = input.winnerTeam?.trim() ? input.winnerTeam.trim() : null;
+    const completedAt = input.completedAt?.trim() ? new Date(input.completedAt) : null;
 
     const match = await tx.match.findUnique({
       where: { id: input.matchId },
@@ -375,7 +383,11 @@ export async function updateMatch(rawInput: UpdateMatchInput) {
         homeTeam: input.homeTeam,
         awayTeam: input.awayTeam,
         startsAt,
-        status: input.status
+        status: input.status,
+        tossWinner,
+        tossDecision,
+        winnerTeam,
+        completedAt
       }
     });
 
@@ -392,11 +404,19 @@ export async function updateMatch(rawInput: UpdateMatchInput) {
           previousAwayTeam: match.awayTeam,
           previousStartsAt: match.startsAt.toISOString(),
           previousStatus: match.status,
+          previousTossWinner: match.tossWinner,
+          previousTossDecision: match.tossDecision,
+          previousWinnerTeam: match.winnerTeam,
+          previousCompletedAt: match.completedAt?.toISOString() ?? null,
           nextTitle: updatedMatch.title,
           nextHomeTeam: updatedMatch.homeTeam,
           nextAwayTeam: updatedMatch.awayTeam,
           nextStartsAt: updatedMatch.startsAt.toISOString(),
-          nextStatus: updatedMatch.status
+          nextStatus: updatedMatch.status,
+          nextTossWinner: updatedMatch.tossWinner,
+          nextTossDecision: updatedMatch.tossDecision,
+          nextWinnerTeam: updatedMatch.winnerTeam,
+          nextCompletedAt: updatedMatch.completedAt?.toISOString() ?? null
         }
       }
     });

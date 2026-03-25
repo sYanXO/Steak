@@ -200,6 +200,10 @@ export async function updateMatchAction(
       homeTeam: String(formData.get("homeTeam") ?? ""),
       awayTeam: String(formData.get("awayTeam") ?? ""),
       startsAt: normalizeDateTimeLocal(formData.get("startsAt")),
+      tossWinner: String(formData.get("tossWinner") ?? ""),
+      tossDecision: String(formData.get("tossDecision") ?? ""),
+      winnerTeam: String(formData.get("winnerTeam") ?? ""),
+      completedAt: normalizeDateTimeLocal(formData.get("completedAt")),
       status: String(formData.get("status") ?? "") as
         | "SCHEDULED"
         | "LIVE"

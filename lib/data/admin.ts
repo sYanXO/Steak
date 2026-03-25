@@ -81,6 +81,10 @@ export const getAdminPageData = unstable_cache(
               awayTeam: true,
               startsAt: true,
               status: true,
+              tossWinner: true,
+              tossDecision: true,
+              winnerTeam: true,
+              completedAt: true,
               _count: {
                 select: {
                   markets: true
@@ -288,6 +292,10 @@ export const getAdminPageData = unstable_cache(
                   awayTeam: true,
                   startsAt: true,
                   status: true,
+                  tossWinner: true,
+                  tossDecision: true,
+                  winnerTeam: true,
+                  completedAt: true,
                   _count: {
                     select: {
                       markets: true

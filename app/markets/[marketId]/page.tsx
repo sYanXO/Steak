@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getMarketPublicDataCached } from "@/lib/data/market";
 import { formatCoins, formatOdds, formatUtcDateTime } from "@/lib/format";
+import { getMarketUnavailableMessage, isMarketUnavailable } from "@/lib/page-state";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +54,8 @@ export default async function MarketDetailPage({
   const totalPool = market.outcomes.reduce((sum, outcome) => sum + outcome.totalStaked, 0);
 
   const viewerStake = viewer?.stakes[0] ?? null;
-  const marketIsUnavailable = market.status === "VOID" || market.status === "SETTLED";
+  const marketIsUnavailable = isMarketUnavailable(market.status);
+  const marketUnavailableMessage = getMarketUnavailableMessage(market.status);
 
   return (
     <main className="app-shell py-8">
@@ -138,9 +140,7 @@ export default async function MarketDetailPage({
                   </>
                 ) : marketIsUnavailable ? (
                   <p className="mt-5 rounded-[20px] border border-[var(--line)] bg-[var(--surface-soft)] px-4 py-3 text-sm text-[var(--muted)]">
-                    {market.status === "VOID"
-                      ? "This market is voided and no further stakes can be placed."
-                      : "This market has already been finalized."}
+                    {marketUnavailableMessage}
                   </p>
                 ) : (
                   <>

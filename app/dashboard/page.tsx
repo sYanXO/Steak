@@ -7,6 +7,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { getDashboardPageDataCached } from "@/lib/data/dashboard";
 import { formatCoins, formatOdds, formatRelativeDelta, formatUtcDateTime } from "@/lib/format";
 import { parsePageParam } from "@/lib/pagination";
+import { getSignInRedirect } from "@/lib/page-state";
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +26,16 @@ export default async function DashboardPage({
   const stakesPage = parsePageParam(params.stakesPage);
   const leaderboardPage = parsePageParam(params.leaderboardPage);
 
-  if (!session?.user?.email) {
-    redirect("/sign-in");
+  const redirectTarget = getSignInRedirect(session);
+
+  if (redirectTarget) {
+    redirect(redirectTarget);
   }
 
+  const userId = session!.user!.id;
+
   const dashboardData = await getDashboardPageDataCached({
-    userId: session.user.id,
+    userId,
     walletPage,
     stakesPage,
     leaderboardPage,

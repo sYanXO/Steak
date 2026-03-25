@@ -20,9 +20,31 @@ export const updateMatchSchema = z.object({
   homeTeam: z.string().trim().min(2, "Home team is too short.").max(60),
   awayTeam: z.string().trim().min(2, "Away team is too short.").max(60),
   startsAt: z.string().datetime("Enter a valid datetime."),
+  tossWinner: z.string().trim().max(60).optional().or(z.literal("")),
+  tossDecision: z.string().trim().max(30).optional().or(z.literal("")),
+  winnerTeam: z.string().trim().max(60).optional().or(z.literal("")),
+  completedAt: z.string().datetime("Enter a valid completion datetime.").optional().or(z.literal("")),
   status: z.enum(["SCHEDULED", "LIVE", "COMPLETED", "CANCELLED", "ARCHIVED"], {
     message: "Invalid match status."
   })
+}).superRefine((input, ctx) => {
+  const teams = [input.homeTeam.trim(), input.awayTeam.trim()];
+
+  if (input.tossWinner && !teams.includes(input.tossWinner)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["tossWinner"],
+      message: "Toss winner must match one of the teams."
+    });
+  }
+
+  if (input.winnerTeam && !teams.includes(input.winnerTeam)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["winnerTeam"],
+      message: "Winner must match one of the teams."
+    });
+  }
 });
 
 export const createMarketSchema = z.object({

@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   recomputeAllGroupLeaderboards,
@@ -11,108 +12,121 @@ export type SettleMarketInput = {
   adminId: string;
 };
 
-export async function settleMarket(rawInput: SettleMarketInput) {
-  const input = settleMarketSchema.parse(rawInput);
+type SettlementExecutionInput = {
+  marketId: string;
+  outcomeId: string;
+  actorId: string | null;
+  requireAdmin: boolean;
+  skipAuditLog?: boolean;
+};
 
-  return prisma.$transaction(async (tx) => {
-    const admin = await tx.user.findUnique({
-      where: { id: rawInput.adminId }
+async function executeSettlement(
+  tx: Prisma.TransactionClient,
+  input: SettlementExecutionInput
+) {
+  let actor = null;
+
+  if (input.actorId) {
+    actor = await tx.user.findUnique({
+      where: { id: input.actorId }
     });
+  }
 
-    if (!admin || admin.role !== "ADMIN") {
-      throw new Error("Admin authorization required.");
-    }
+  if (input.requireAdmin && (!actor || actor.role !== "ADMIN")) {
+    throw new Error("Admin authorization required.");
+  }
 
-    const market = await tx.market.findUnique({
-      where: { id: input.marketId },
-      include: {
-        outcomes: {
-          orderBy: { order: "asc" }
-        },
-        stakes: {
-          where: { result: "PENDING" },
-          include: {
-            user: {
-              include: {
-                wallet: true
-              }
+  const market = await tx.market.findUnique({
+    where: { id: input.marketId },
+    include: {
+      outcomes: {
+        orderBy: { order: "asc" }
+      },
+      stakes: {
+        where: { result: "PENDING" },
+        include: {
+          user: {
+            include: {
+              wallet: true
             }
           }
         }
       }
-    });
-
-    if (!market) {
-      throw new Error("Market not found.");
     }
+  });
 
-    if (market.status === "SETTLED" || market.status === "VOID") {
-      throw new Error("This market has already been finalized.");
-    }
+  if (!market) {
+    throw new Error("Market not found.");
+  }
 
-    const winningOutcome = market.outcomes.find((outcome) => outcome.id === input.outcomeId);
+  if (market.status === "SETTLED" || market.status === "VOID") {
+    throw new Error("This market has already been finalized.");
+  }
 
-    if (!winningOutcome) {
-      throw new Error("Selected outcome does not belong to this market.");
-    }
+  const winningOutcome = market.outcomes.find((outcome) => outcome.id === input.outcomeId);
 
-    const settledAt = new Date();
+  if (!winningOutcome) {
+    throw new Error("Selected outcome does not belong to this market.");
+  }
 
-    for (const stake of market.stakes) {
-      const won = stake.outcomeId === winningOutcome.id;
-      const payoutAmount = won ? Math.round(Number(stake.payoutBasis)) : 0;
+  const settledAt = new Date();
 
-      await tx.stake.update({
-        where: { id: stake.id },
-        data: {
-          result: won ? "WON" : "LOST",
-          payoutAmount,
-          settledAt
-        }
-      });
+  for (const stake of market.stakes) {
+    const won = stake.outcomeId === winningOutcome.id;
+    const payoutAmount = won ? Math.round(Number(stake.payoutBasis)) : 0;
 
-      if (won) {
-        const wallet = stake.user.wallet;
-
-        if (!wallet) {
-          throw new Error("Winning user wallet is missing.");
-        }
-
-        const balanceAfter = wallet.balance + payoutAmount;
-
-        await tx.wallet.update({
-          where: { id: wallet.id },
-          data: {
-            balance: balanceAfter
-          }
-        });
-
-        await tx.ledgerEntry.create({
-          data: {
-            walletId: wallet.id,
-            type: "SETTLEMENT_CREDIT",
-            amountDelta: payoutAmount,
-            balanceAfter,
-            reason: `Settlement payout for ${market.title}: ${winningOutcome.label}`,
-            relatedEntityId: stake.id,
-            actorId: admin.id
-          }
-        });
-      }
-    }
-
-    await tx.market.update({
-      where: { id: market.id },
+    await tx.stake.update({
+      where: { id: stake.id },
       data: {
-        status: "SETTLED",
-        settledOutcomeId: winningOutcome.id,
+        result: won ? "WON" : "LOST",
+        payoutAmount,
         settledAt
       }
     });
 
+    if (won) {
+      const wallet = stake.user.wallet;
+
+      if (!wallet) {
+        throw new Error("Winning user wallet is missing.");
+      }
+
+      const balanceAfter = wallet.balance + payoutAmount;
+
+      await tx.wallet.update({
+        where: { id: wallet.id },
+        data: {
+          balance: balanceAfter
+        }
+      });
+
+      await tx.ledgerEntry.create({
+        data: {
+          walletId: wallet.id,
+          type: "SETTLEMENT_CREDIT",
+          amountDelta: payoutAmount,
+          balanceAfter,
+          reason: `Settlement payout for ${market.title}: ${winningOutcome.label}`,
+          relatedEntityId: stake.id,
+          actorId: actor?.id ?? null
+        }
+      });
+    }
+  }
+
+  await tx.market.update({
+    where: { id: market.id },
+    data: {
+      status: "SETTLED",
+      settledOutcomeId: winningOutcome.id,
+      settledAt
+    }
+  });
+
+  if (actor && !input.skipAuditLog) {
     await tx.adminActionLog.create({
       data: {
-        adminId: admin.id,
+        adminId: actor.id,
         actionType: "MARKET_SETTLED",
         targetType: "Market",
         targetId: market.id,
@@ -123,14 +137,43 @@ export async function settleMarket(rawInput: SettleMarketInput) {
         }
       }
     });
+  }
 
-    await recomputeGlobalLeaderboard(tx);
-    await recomputeAllGroupLeaderboards(tx);
+  await recomputeGlobalLeaderboard(tx);
+  await recomputeAllGroupLeaderboards(tx);
 
-    return {
-      marketId: market.id,
-      settledOutcome: winningOutcome.label,
-      settledStakeCount: market.stakes.length
-    };
-  });
+  return {
+    marketId: market.id,
+    settledOutcome: winningOutcome.label,
+    settledStakeCount: market.stakes.length
+  };
+}
+
+export async function settleMarket(rawInput: SettleMarketInput) {
+  const input = settleMarketSchema.parse(rawInput);
+
+  return prisma.$transaction((tx) =>
+    executeSettlement(tx, {
+      marketId: input.marketId,
+      outcomeId: input.outcomeId,
+      actorId: rawInput.adminId,
+      requireAdmin: true
+    })
+  );
+}
+
+export async function settleMarketAutomatically(input: {
+  marketId: string;
+  outcomeId: string;
+  actorId?: string | null;
+}) {
+  return prisma.$transaction((tx) =>
+    executeSettlement(tx, {
+      marketId: input.marketId,
+      outcomeId: input.outcomeId,
+      actorId: input.actorId ?? null,
+      requireAdmin: false,
+      skipAuditLog: !input.actorId
+    })
+  );
 }

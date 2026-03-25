@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
-
-const STORAGE_KEY = "stake-ipl-theme";
+import { THEME_STORAGE_KEY } from "@/lib/theme";
 
 function applyTheme(theme: "light" | "dark") {
   document.documentElement.classList.toggle("dark", theme === "dark");
@@ -14,7 +13,7 @@ export function ThemeToggle() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem(STORAGE_KEY);
+    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
     const preferredTheme =
       storedTheme === "light" || storedTheme === "dark"
         ? storedTheme
@@ -30,7 +29,7 @@ export function ThemeToggle() {
   function toggleTheme() {
     const nextTheme = theme === "dark" ? "light" : "dark";
     applyTheme(nextTheme);
-    window.localStorage.setItem(STORAGE_KEY, nextTheme);
+    window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
     setTheme(nextTheme);
   }
 

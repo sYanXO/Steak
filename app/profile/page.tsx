@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { RecoveryRequestForm } from "@/components/profile/recovery-request-form";
 import { Card } from "@/components/ui/card";
 import { formatUtcDateTime } from "@/lib/format";
+import { getUserByIdRedirect } from "@/lib/page-state";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -12,12 +13,16 @@ export const dynamic = "force-dynamic";
 export default async function ProfilePage() {
   const session = await auth();
 
-  if (!session?.user?.id) {
-    redirect("/sign-in");
+  const redirectTarget = getUserByIdRedirect(session);
+
+  if (redirectTarget) {
+    redirect(redirectTarget);
   }
 
+  const userId = session!.user!.id;
+
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: userId },
     select: {
       id: true,
       name: true,
