@@ -7,6 +7,7 @@ import {
   createMarket,
   createMatch,
   manualTopUp,
+  updateMatch,
   updateMarketStatus
 } from "@/lib/services/admin-operations";
 import { resolveRecoveryRequest } from "@/lib/services/profile";
@@ -25,6 +26,9 @@ export type AdminCreateActionState = {
 export type AdminMutationActionState = {
   error?: string;
   success?: string;
+  meta?: {
+    refundedStakeCount?: number;
+  };
 };
 
 function getActionErrorMessage(error: unknown, fallback: string) {
@@ -168,6 +172,43 @@ export async function createMarketAction(
   }
 }
 
+export async function updateMatchAction(
+  matchId: string,
+  _prevState: AdminMutationActionState,
+  formData: FormData
+): Promise<AdminMutationActionState> {
+  const session = await auth();
+
+  if (!session?.user?.email || session.user.role !== "ADMIN") {
+    return { error: "Admin authorization required." };
+  }
+
+  try {
+    const match = await updateMatch({
+      matchId,
+      title: String(formData.get("title") ?? ""),
+      homeTeam: String(formData.get("homeTeam") ?? ""),
+      awayTeam: String(formData.get("awayTeam") ?? ""),
+      startsAt: normalizeDateTimeLocal(formData.get("startsAt")),
+      status: String(formData.get("status") ?? "") as
+        | "SCHEDULED"
+        | "LIVE"
+        | "COMPLETED"
+        | "CANCELLED",
+      adminId: session.user.id
+    });
+
+    revalidatePath("/");
+    revalidatePath("/admin");
+
+    return {
+      success: `Updated match ${match.homeTeam} vs ${match.awayTeam}.`
+    };
+  } catch (error) {
+    return { error: getActionErrorMessage(error, "Unable to update match.") };
+  }
+}
+
 export async function updateMarketStatusAction(
   marketId: string,
   _prevState: AdminMutationActionState,
@@ -191,7 +232,11 @@ export async function updateMarketStatusAction(
     revalidatePath(`/markets/${market.id}`);
 
     return {
-      success: `Market status updated to ${market.status}.`
+      success:
+        market.status === "VOID"
+          ? `Market voided and ${market.refundedStakeCount} stake(s) refunded.`
+          : `Market status updated to ${market.status}.`,
+      meta: market.status === "VOID" ? { refundedStakeCount: market.refundedStakeCount } : undefined
     };
   } catch (error) {
     return { error: getActionErrorMessage(error, "Unable to update market status.") };

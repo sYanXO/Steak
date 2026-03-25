@@ -6,11 +6,19 @@ import { ManualTopUpForm } from "@/components/admin/manual-top-up-form";
 import { MarketStatusForm } from "@/components/admin/market-status-form";
 import { RecoveryRequestForm } from "@/components/admin/recovery-request-form";
 import { SettleMarketForm } from "@/components/admin/settle-market-form";
+import { UpdateMatchForm } from "@/components/admin/update-match-form";
 import { Card } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { formatCoins, formatUtcDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+
+function toDateTimeLocalValue(date: Date) {
+  const offsetMillis = (5 * 60 + 30) * 60 * 1000;
+  const shifted = new Date(date.getTime() + offsetMillis);
+
+  return shifted.toISOString().slice(0, 16);
+}
 
 async function getOpenRecoveryRequests() {
   try {
@@ -85,9 +93,16 @@ export default async function AdminPage() {
       take: 8,
       select: {
         id: true,
+        title: true,
         homeTeam: true,
         awayTeam: true,
-        startsAt: true
+        startsAt: true,
+        status: true,
+        _count: {
+          select: {
+            markets: true
+          }
+        }
       }
     }),
     prisma.user.findMany({
@@ -177,17 +192,38 @@ export default async function AdminPage() {
                       {formatUtcDateTime(market.closesAt)}.
                     </p>
                   </div>
-                  <span className="rounded-full bg-[var(--panel-strong)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]">
+                  <span
+                    className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]"
+                    style={{
+                      background:
+                        market.status === "VOID" ? "var(--alert-error-bg)" : "var(--panel-strong)",
+                      color:
+                        market.status === "VOID" ? "var(--alert-error-text)" : "var(--foreground)"
+                    }}
+                  >
                     {market.status}
                   </span>
                 </div>
-                <SettleMarketForm
-                  marketId={market.id}
-                  outcomes={market.outcomes.map((outcome) => ({
-                    id: outcome.id,
-                    label: outcome.label
-                  }))}
-                />
+                {market.status === "VOID" ? (
+                  <p
+                    className="mt-4 rounded-[20px] border px-4 py-3 text-sm"
+                    style={{
+                      borderColor: "var(--alert-error-border)",
+                      background: "var(--alert-error-bg)",
+                      color: "var(--alert-error-text)"
+                    }}
+                  >
+                    This market has been voided. Pending stakes are refunded and settlement is disabled.
+                  </p>
+                ) : (
+                  <SettleMarketForm
+                    marketId={market.id}
+                    outcomes={market.outcomes.map((outcome) => ({
+                      id: outcome.id,
+                      label: outcome.label
+                    }))}
+                  />
+                )}
                 <MarketStatusForm marketId={market.id} currentStatus={market.status} />
               </div>
             ))}
@@ -239,6 +275,47 @@ export default async function AdminPage() {
           </div>
         </Card>
       </div>
+
+      <Card className="mt-6 rounded-[32px] p-6 md:p-8">
+        <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
+          Match management
+        </p>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Update fixture details and lifecycle status without recreating attached markets.
+        </p>
+        <div className="mt-5 grid gap-4">
+          {upcomingMatches.map((match) => (
+            <div
+              key={match.id}
+              className="rounded-[22px] border border-[var(--line)] bg-[var(--surface-strong)] p-5"
+            >
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="font-medium">
+                    {match.homeTeam} vs {match.awayTeam}
+                  </p>
+                  <p className="text-sm text-[var(--muted)]">
+                    {match._count.markets} linked market(s). Starts {formatUtcDateTime(match.startsAt)}.
+                  </p>
+                </div>
+                <span className="rounded-full bg-[var(--panel-strong)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]">
+                  {match.status}
+                </span>
+              </div>
+              <UpdateMatchForm
+                match={{
+                  id: match.id,
+                  title: match.title,
+                  homeTeam: match.homeTeam,
+                  awayTeam: match.awayTeam,
+                  startsAtLocalValue: toDateTimeLocalValue(match.startsAt),
+                  status: match.status
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      </Card>
 
       <Card className="mt-6 rounded-[32px] p-6 md:p-8">
         <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">

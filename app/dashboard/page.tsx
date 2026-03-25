@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
-import { formatCoins, formatRelativeDelta, formatUtcDateTime } from "@/lib/format";
+import { formatCoins, formatOdds, formatRelativeDelta, formatUtcDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +33,28 @@ export default async function DashboardPage() {
               reason: true,
               amountDelta: true,
               createdAt: true
+            }
+          }
+        }
+      },
+      stakes: {
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          amount: true,
+          quotedOdds: true,
+          result: true,
+          payoutAmount: true,
+          settledAt: true,
+          market: {
+            select: {
+              title: true
+            }
+          },
+          outcome: {
+            select: {
+              label: true
             }
           }
         }
@@ -158,6 +180,53 @@ export default async function DashboardPage() {
       <Card className="mt-6 rounded-[32px] p-6 md:p-8">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
+            Recent stakes
+          </p>
+          <span className="text-sm text-[var(--muted)]">Includes settled and voided markets</span>
+        </div>
+        <div className="mt-4 space-y-3">
+          {user.stakes.length === 0 ? (
+            <p className="text-sm text-[var(--muted)]">No stakes placed yet.</p>
+          ) : (
+            user.stakes.map((stake) => (
+              <div
+                key={stake.id}
+                className="rounded-[20px] border border-[var(--line)] bg-[var(--surface-soft)] px-4 py-3"
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="font-medium">
+                      {stake.market.title}: {stake.outcome.label}
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--muted)]">
+                      {formatCoins(stake.amount)} coins at {formatOdds(Number(stake.quotedOdds))}
+                    </p>
+                  </div>
+                  <span
+                    className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]"
+                    style={statusPillStyle(stake.result)}
+                  >
+                    {stake.result}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-[var(--muted)]">
+                  {stake.result === "VOID"
+                    ? `Refunded ${formatCoins(stake.payoutAmount)} coins${
+                        stake.settledAt ? ` on ${formatUtcDateTime(stake.settledAt)}` : ""
+                      }.`
+                    : stake.settledAt
+                      ? `Resolved ${formatUtcDateTime(stake.settledAt)}.`
+                      : "Awaiting market settlement."}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+      </Card>
+
+      <Card className="mt-6 rounded-[32px] p-6 md:p-8">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm uppercase tracking-[0.2em] text-[var(--muted)]">
             Group standings
           </p>
           <a href="/groups" className="text-sm font-semibold text-[var(--accent-dark)]">
@@ -253,4 +322,25 @@ function Stat({
       <p className="mt-1 text-sm text-[var(--muted)]">{detail}</p>
     </div>
   );
+}
+
+function statusPillStyle(result: "PENDING" | "WON" | "LOST" | "VOID") {
+  if (result === "WON") {
+    return {
+      background: "var(--alert-success-bg)",
+      color: "var(--alert-success-text)"
+    };
+  }
+
+  if (result === "VOID") {
+    return {
+      background: "var(--alert-error-bg)",
+      color: "var(--alert-error-text)"
+    };
+  }
+
+  return {
+    background: "var(--panel-strong)",
+    color: "var(--foreground)"
+  };
 }

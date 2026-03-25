@@ -83,6 +83,7 @@ export default async function MarketDetailPage({
   const totalPool = market.outcomes.reduce((sum, outcome) => sum + outcome.totalStaked, 0);
 
   const viewerStake = viewer?.stakes[0] ?? null;
+  const marketIsUnavailable = market.status === "VOID" || market.status === "SETTLED";
 
   return (
     <main className="app-shell py-8">
@@ -96,6 +97,18 @@ export default async function MarketDetailPage({
             Match starts {formatUtcDateTime(market.match.startsAt)}. Market closes{" "}
             {formatUtcDateTime(market.closesAt)}.
           </p>
+          {market.status === "VOID" ? (
+            <p
+              className="mt-4 rounded-[20px] border px-4 py-3 text-sm"
+              style={{
+                borderColor: "var(--alert-error-border)",
+                background: "var(--alert-error-bg)",
+                color: "var(--alert-error-text)"
+              }}
+            >
+              This market was voided. Pending stakes were refunded and no settlement result will be recorded.
+            </p>
+          ) : null}
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             {market.outcomes.map((outcome) => (
@@ -153,6 +166,12 @@ export default async function MarketDetailPage({
                       </p>
                     </div>
                   </>
+                ) : marketIsUnavailable ? (
+                  <p className="mt-5 rounded-[20px] border border-[var(--line)] bg-[var(--surface-soft)] px-4 py-3 text-sm text-[var(--muted)]">
+                    {market.status === "VOID"
+                      ? "This market is voided and no further stakes can be placed."
+                      : "This market has already been finalized."}
+                  </p>
                 ) : (
                   <>
                     <p className="mt-5 text-sm text-[var(--muted)]">

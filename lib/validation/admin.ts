@@ -12,6 +12,17 @@ export const createMatchSchema = z.object({
   startsAt: z.string().datetime("Enter a valid datetime.")
 });
 
+export const updateMatchSchema = z.object({
+  matchId: z.string().min(1, "Invalid match selection."),
+  title: z.string().trim().min(3, "Title is too short.").max(120),
+  homeTeam: z.string().trim().min(2, "Home team is too short.").max(60),
+  awayTeam: z.string().trim().min(2, "Away team is too short.").max(60),
+  startsAt: z.string().datetime("Enter a valid datetime."),
+  status: z.enum(["SCHEDULED", "LIVE", "COMPLETED", "CANCELLED"], {
+    message: "Invalid match status."
+  })
+});
+
 export const createMarketSchema = z.object({
   matchId: z.string().min(1, "Select a match."),
   title: z.string().trim().min(3, "Title is too short.").max(120),

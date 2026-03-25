@@ -9,6 +9,7 @@ import {
   createMarketSchema,
   createMatchSchema,
   manualTopUpSchema,
+  updateMatchSchema,
   updateMarketStatusSchema
 } from "@/lib/validation/admin";
 
@@ -35,6 +36,15 @@ type CreateMarketInput = AdminIdentity & {
 type UpdateMarketStatusInput = AdminIdentity & {
   marketId: string;
   status: "DRAFT" | "OPEN" | "CLOSED" | "VOID";
+};
+
+type UpdateMatchInput = AdminIdentity & {
+  matchId: string;
+  title: string;
+  homeTeam: string;
+  awayTeam: string;
+  startsAt: string;
+  status: "SCHEDULED" | "LIVE" | "COMPLETED" | "CANCELLED";
 };
 
 type ManualTopUpInput = AdminIdentity & {
@@ -208,14 +218,83 @@ export async function updateMarketStatus(rawInput: UpdateMarketStatusInput) {
       throw new Error("Settled markets cannot be moved to another status.");
     }
 
+    if (market.status === input.status) {
+      throw new Error(`Market is already ${input.status}.`);
+    }
+
     if (input.status === "OPEN" && market.closesAt <= new Date()) {
       throw new Error("Cannot reopen a market after its close time.");
+    }
+
+    let refundedStakeCount = 0;
+
+    if (input.status === "VOID") {
+      const pendingStakes = await tx.stake.findMany({
+        where: {
+          marketId: market.id,
+          result: "PENDING"
+        },
+        include: {
+          outcome: {
+            select: {
+              label: true
+            }
+          },
+          user: {
+            include: {
+              wallet: true
+            }
+          }
+        }
+      });
+
+      refundedStakeCount = pendingStakes.length;
+
+      for (const stake of pendingStakes) {
+        const wallet = stake.user.wallet;
+
+        if (!wallet) {
+          throw new Error("A pending stake user is missing a wallet.");
+        }
+
+        const balanceAfter = wallet.balance + stake.amount;
+
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: {
+            balance: balanceAfter
+          }
+        });
+
+        await tx.ledgerEntry.create({
+          data: {
+            walletId: wallet.id,
+            type: "SETTLEMENT_REVERSAL",
+            amountDelta: stake.amount,
+            balanceAfter,
+            reason: `Void refund for ${market.title}: ${stake.outcome.label}`,
+            relatedEntityId: stake.id,
+            actorId: admin.id
+          }
+        });
+
+        await tx.stake.update({
+          where: { id: stake.id },
+          data: {
+            result: "VOID",
+            payoutAmount: stake.amount,
+            settledAt: new Date()
+          }
+        });
+      }
     }
 
     const updatedMarket = await tx.market.update({
       where: { id: market.id },
       data: {
-        status: input.status
+        status: input.status,
+        settledAt: input.status === "VOID" ? new Date() : market.settledAt,
+        settledOutcomeId: input.status === "VOID" ? null : market.settledOutcomeId
       }
     });
 
@@ -228,12 +307,95 @@ export async function updateMarketStatus(rawInput: UpdateMarketStatusInput) {
         reason: `Changed ${market.title} to ${input.status}`,
         metadata: {
           previousStatus: market.status,
-          newStatus: input.status
+          newStatus: input.status,
+          refundedStakeCount
         }
       }
     });
 
-    return updatedMarket;
+    if (input.status === "VOID") {
+      await recomputeGlobalLeaderboard(tx);
+      await recomputeAllGroupLeaderboards(tx);
+    }
+
+    return {
+      ...updatedMarket,
+      refundedStakeCount
+    };
+  });
+}
+
+export async function updateMatch(rawInput: UpdateMatchInput) {
+  const input = updateMatchSchema.parse(rawInput);
+
+  return prisma.$transaction(async (tx) => {
+    const admin = await requireAdmin(tx, rawInput.adminId);
+    const startsAt = new Date(input.startsAt);
+
+    const match = await tx.match.findUnique({
+      where: { id: input.matchId },
+      include: {
+        markets: {
+          where: {
+            status: {
+              in: ["DRAFT", "OPEN", "CLOSED"]
+            }
+          },
+          select: {
+            id: true,
+            title: true,
+            closesAt: true
+          }
+        }
+      }
+    });
+
+    if (!match) {
+      throw new Error("Match not found.");
+    }
+
+    const invalidMarket = match.markets.find((market) => market.closesAt > startsAt);
+
+    if (invalidMarket) {
+      throw new Error(
+        `Match start cannot move before the close time of ${invalidMarket.title}.`
+      );
+    }
+
+    const updatedMatch = await tx.match.update({
+      where: { id: match.id },
+      data: {
+        title: input.title,
+        homeTeam: input.homeTeam,
+        awayTeam: input.awayTeam,
+        startsAt,
+        status: input.status
+      }
+    });
+
+    await tx.adminActionLog.create({
+      data: {
+        adminId: admin.id,
+        actionType: "MATCH_UPDATED",
+        targetType: "Match",
+        targetId: match.id,
+        reason: `Updated match ${updatedMatch.homeTeam} vs ${updatedMatch.awayTeam}`,
+        metadata: {
+          previousTitle: match.title,
+          previousHomeTeam: match.homeTeam,
+          previousAwayTeam: match.awayTeam,
+          previousStartsAt: match.startsAt.toISOString(),
+          previousStatus: match.status,
+          nextTitle: updatedMatch.title,
+          nextHomeTeam: updatedMatch.homeTeam,
+          nextAwayTeam: updatedMatch.awayTeam,
+          nextStartsAt: updatedMatch.startsAt.toISOString(),
+          nextStatus: updatedMatch.status
+        }
+      }
+    });
+
+    return updatedMatch;
   });
 }
 
