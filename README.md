@@ -215,7 +215,7 @@ Use it to:
 
 - import provider-owned fixtures into `Match`
 - refresh live and recently updated matches
-- feed toss and winner data into the existing market automation flow
+- feed toss and winner data into the existing market automation flow when requested
 
 Required env:
 
@@ -226,6 +226,16 @@ This route is protected the same way as the market automation route:
 
 - `Authorization: Bearer <CRON_SECRET>`
 - `x-cron-secret: <CRON_SECRET>`
+
+By default, `/api/cron/cricketdata-sync` only syncs provider matches.
+If you want sync plus automation in one request, call:
+
+- `/api/cron/cricketdata-sync?automation=1`
+
+For better runtime behavior on free-tier infrastructure, prefer two separate cron calls:
+
+1. `/api/cron/cricketdata-sync`
+2. `/api/cron/market-automation`
 
 ## Current product surface
 

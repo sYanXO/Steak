@@ -38,8 +38,11 @@ export async function GET(request: Request) {
   logActionStart("cron.cricketdata-sync");
 
   try {
+    const { searchParams } = new URL(request.url);
+    const includeAutomation =
+      searchParams.get("automation") === "1" || searchParams.get("automation") === "true";
     const syncSummary = await syncCricketDataMatches(apiKey);
-    const automationSummary = await runMarketAutomation();
+    const automationSummary = includeAutomation ? await runMarketAutomation() : null;
 
     revalidatePath("/");
     revalidatePath("/admin");
@@ -50,8 +53,9 @@ export async function GET(request: Request) {
       syncedMatchCount: syncSummary.syncedMatchCount,
       createdMatchCount: syncSummary.createdMatchCount,
       updatedMatchCount: syncSummary.updatedMatchCount,
-      autoCreatedMarketCount: automationSummary.createdMarketCount,
-      autoSettledMarketCount: automationSummary.settledMarketCount
+      automationIncluded: includeAutomation,
+      autoCreatedMarketCount: automationSummary?.createdMarketCount ?? 0,
+      autoSettledMarketCount: automationSummary?.settledMarketCount ?? 0
     });
 
     return NextResponse.json({

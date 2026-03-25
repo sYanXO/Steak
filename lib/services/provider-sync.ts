@@ -10,6 +10,25 @@ type SyncSummary = {
 
 export async function syncCricketDataMatches(apiKey: string): Promise<SyncSummary> {
   const matches = await fetchCricketDataMatches(apiKey);
+  const providerMatchIds = matches.map((match) => match.providerMatchId);
+  const existingMatches =
+    providerMatchIds.length === 0
+      ? []
+      : await prisma.match.findMany({
+          where: {
+            providerMatchId: {
+              in: providerMatchIds
+            }
+          },
+          select: {
+            providerMatchId: true
+          }
+        });
+  const existingIds = new Set(
+    existingMatches
+      .map((match) => match.providerMatchId)
+      .filter((value): value is string => Boolean(value))
+  );
   let createdMatchCount = 0;
   let updatedMatchCount = 0;
 
@@ -44,14 +63,7 @@ export async function syncCricketDataMatches(apiKey: string): Promise<SyncSummar
       lastSyncedAt: new Date()
     };
 
-    const existing = await prisma.match.findUnique({
-      where,
-      select: {
-        id: true
-      }
-    });
-
-    if (existing) {
+    if (existingIds.has(match.providerMatchId)) {
       updatedMatchCount += 1;
     } else {
       createdMatchCount += 1;
