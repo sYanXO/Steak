@@ -15,6 +15,10 @@ import { formatOdds } from "@/lib/format";
 
 type MarketSnapshot = {
   title: string;
+  match: {
+    homeTeam: string;
+    awayTeam: string;
+  };
   outcomes: Array<{
     id: string;
     label: string;
@@ -39,6 +43,16 @@ export function LandingOddsChart({
 }) {
   const primaryOutcome = market?.outcomes[0];
   const secondaryOutcome = market?.outcomes[1];
+  const primaryLabel = resolveOutcomeDisplayLabel(
+    primaryOutcome?.label,
+    market?.match.homeTeam,
+    "Team 1"
+  );
+  const secondaryLabel = resolveOutcomeDisplayLabel(
+    secondaryOutcome?.label,
+    market?.match.awayTeam,
+    "Team 2"
+  );
   const chartData = buildChartData(primaryOutcome, secondaryOutcome);
 
   return (
@@ -105,8 +119,8 @@ export function LandingOddsChart({
               <Tooltip
                 content={
                   <ChartTooltip
-                    primaryLabel={primaryOutcome?.label}
-                    secondaryLabel={secondaryOutcome?.label}
+                    primaryLabel={primaryLabel}
+                    secondaryLabel={secondaryLabel}
                   />
                 }
                 cursor={{ stroke: "var(--line)", strokeDasharray: "4 6" }}
@@ -139,12 +153,12 @@ export function LandingOddsChart({
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <LegendPill
           accentClass="bg-[var(--accent)]"
-          label={abbreviateTeam(primaryOutcome?.label ?? "Primary outcome")}
+          label={primaryLabel}
           odds={Number(primaryOutcome?.currentOdds ?? 0)}
         />
         <LegendPill
           accentClass="bg-[var(--success)]"
-          label={abbreviateTeam(secondaryOutcome?.label ?? "Secondary outcome")}
+          label={secondaryLabel}
           odds={Number(secondaryOutcome?.currentOdds ?? 0)}
         />
       </div>
@@ -206,21 +220,22 @@ function formatLocalTime(value: Date) {
   }).format(value);
 }
 
-function abbreviateTeam(label: string) {
-  const cleaned = label.trim();
+function resolveOutcomeDisplayLabel(
+  label: string | undefined,
+  fallbackTeam: string | undefined,
+  finalFallback: string
+) {
+  const cleaned = label?.trim() ?? "";
 
-  if (cleaned.length <= 8) {
-    return cleaned.toUpperCase();
+  if (
+    !cleaned ||
+    /^primary(?:\s+outcome)?$/i.test(cleaned) ||
+    /^secondary(?:\s+outcome)?$/i.test(cleaned)
+  ) {
+    return fallbackTeam?.trim() || finalFallback;
   }
 
-  const words = cleaned.split(/\s+/).filter(Boolean);
-
-  if (words.length === 1) {
-    return cleaned.slice(0, 8).toUpperCase();
-  }
-
-  const abbreviation = words.map((word) => word[0]).join("").toUpperCase();
-  return abbreviation.slice(0, 4);
+  return cleaned;
 }
 
 function ChartTooltip({
@@ -245,15 +260,11 @@ function ChartTooltip({
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{label}</p>
       <div className="mt-2 space-y-2 text-sm">
         <div className="flex items-center justify-between gap-4">
-          <span className="text-[var(--muted)]">
-            {abbreviateTeam(primaryLabel ?? "Primary")}
-          </span>
+          <span className="text-[var(--muted)]">{primaryLabel ?? "Team 1"}</span>
           <span className="font-semibold">{formatOdds(Number(primary ?? 0))}</span>
         </div>
         <div className="flex items-center justify-between gap-4">
-          <span className="text-[var(--muted)]">
-            {abbreviateTeam(secondaryLabel ?? "Secondary")}
-          </span>
+          <span className="text-[var(--muted)]">{secondaryLabel ?? "Team 2"}</span>
           <span className="font-semibold">{formatOdds(Number(secondary ?? 0))}</span>
         </div>
       </div>
@@ -275,7 +286,9 @@ function LegendPill({
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className={`size-2.5 rounded-full ${accentClass}`} />
-          <span className="text-sm font-medium">{label}</span>
+          <span className="truncate text-sm font-medium" title={label}>
+            {label}
+          </span>
         </div>
         <span className="text-sm font-semibold">{formatOdds(odds)}</span>
       </div>
